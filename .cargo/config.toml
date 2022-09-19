@@ -1,0 +1,2 @@
+[build]
+jobs = 1 # For stream not to lag
