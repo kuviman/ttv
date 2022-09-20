@@ -1,5 +1,7 @@
 use geng::prelude::*;
 
+mod font;
+
 #[derive(Deserialize, geng::Assets)]
 #[asset(json)]
 // #[asset(json)]
@@ -332,8 +334,73 @@ impl geng::State for Test {
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
-                    .fit_into(name_aabb),
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    &guy.name,
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .fit_into(name_aabb),
+            );
+        }
+
+        let ui_camera = geng::Camera2d {
+            center: Vec2::ZERO,
+            rotation: 0.0,
+            fov: 15.0,
+        };
+        if !self.process_battle {
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    "RAFFLE ROYALE",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .translate(vec2(0.0, 5.0)),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    "type !fight to join",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .scale_uniform(0.5)
+                .translate(vec2(0.0, 2.5)),
+            );
+        } else if self.guys.len() == 1 {
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    "WINNER",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .translate(vec2(0.0, 5.0)),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    "hooray",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .scale_uniform(0.5)
+                .translate(vec2(0.0, 2.5)),
             );
         }
     }
@@ -408,8 +475,13 @@ impl geng::State for Test {
             self.circle.center += (target_circle.center - self.circle.center) * delta_time;
             self.circle.radius += (target_circle.radius - self.circle.radius) * delta_time;
         }
-        let target_fov = self.circle.radius * 2.5;
-        self.camera.center += (self.circle.center - self.camera.center) * delta_time;
+        let mut target_fov = self.circle.radius * 2.5;
+        let mut target_center = self.circle.center;
+        if !self.process_battle || self.guys.len() == 1 {
+            target_center.y += target_fov * 0.3;
+            target_fov *= 1.5;
+        }
+        self.camera.center += (target_center - self.camera.center) * delta_time;
         self.camera.fov += (target_fov - self.camera.fov) * delta_time;
     }
 }
