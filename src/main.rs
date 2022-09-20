@@ -3,7 +3,7 @@ use geng::prelude::*;
 mod font;
 mod twitch_bot;
 
-enum Message {
+pub enum Message {
     SomeoneWantsToFight { name: String },
 }
 
@@ -370,11 +370,11 @@ impl geng::State for RaffleRoyale {
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &font::Text::unit(
-                    &self.geng,
+                &draw_2d::Text::unit(
+                    // &self.geng,
                     &**self.geng.default_font(),
                     &guy.name,
-                    Rgba::WHITE,
+                    // Rgba::WHITE,
                     Rgba::BLACK,
                 )
                 .fit_into(name_aabb),
@@ -413,13 +413,18 @@ impl geng::State for RaffleRoyale {
                 .translate(vec2(0.0, 2.5)),
             );
         } else if self.guys.len() == 1 {
+            let winner = self.guys.iter().next().unwrap();
             self.geng.draw_2d(
                 framebuffer,
                 &ui_camera,
                 &font::Text::unit(
                     &self.geng,
                     &**self.geng.default_font(),
-                    "WINNER",
+                    if winner.name == "kuviman" {
+                        "RIGGED"
+                    } else {
+                        "WINNER"
+                    },
                     Rgba::WHITE,
                     Rgba::BLACK,
                 )
@@ -508,7 +513,16 @@ impl geng::State for RaffleRoyale {
         while let Some(message) = self.ttv_client.next_message() {
             match message {
                 Message::SomeoneWantsToFight { name } => {
-                    self.spawn_guy(name);
+                    if !self.process_battle {
+                        if self.guys.iter().any(|guy| guy.name == name) {
+                            self.ttv_client.say("Not cheating allowed 🚫");
+                        } else {
+                            self.spawn_guy(name);
+                        }
+                    } else {
+                        self.ttv_client
+                            .say("You can't join into an ongoing fight, sorry Kappa");
+                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 use std::io::Read;
 
 use crate::Message;
+use geng::prelude::futures::executor::block_on;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use twitch_irc::{
     login::StaticLoginCredentials, message::ServerMessage, ClientConfig, SecureTCPTransport,
@@ -8,6 +9,7 @@ use twitch_irc::{
 };
 
 pub struct Client {
+    channel_login: String,
     inner: TwitchIRCClient<SecureTCPTransport, StaticLoginCredentials>,
     messages: UnboundedReceiver<Message>,
 }
@@ -15,6 +17,14 @@ pub struct Client {
 impl Client {
     pub fn next_message(&mut self) -> Option<Message> {
         self.messages.try_recv().ok()
+    }
+
+    pub fn say(&self, message: &str) {
+        block_on(
+            self.inner
+                .say(self.channel_login.clone(), message.to_owned()),
+        )
+        .unwrap();
     }
 }
 
@@ -49,9 +59,10 @@ pub fn spawn() -> Client {
         incoming_messages,
         messages_sender,
     );
-    std::thread::spawn({ move || tokio_runtime.block_on(async_thread) });
+    std::thread::spawn(move || tokio_runtime.block_on(async_thread));
 
     Client {
+        channel_login: channel_login.clone(),
         inner: client,
         messages: messages_receiver,
     }
