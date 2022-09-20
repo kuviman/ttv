@@ -271,13 +271,13 @@ impl geng::State for Test {
                     &self.assets.hat,
                 ),
             );
-            let hp_aabb =
+            let hp_text_aabb =
                 AABB::point(guy.position + vec2(-Test::GUY_RADIUS, Test::GUY_RADIUS) * 1.5)
                     .extend_uniform(Test::GUY_RADIUS * 0.5);
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Ellipse::unit(Rgba::BLACK).fit_into(hp_aabb),
+                &draw_2d::Ellipse::unit(Rgba::BLACK).fit_into(hp_text_aabb),
             );
             self.geng.draw_2d(
                 framebuffer,
@@ -285,9 +285,40 @@ impl geng::State for Test {
                 &draw_2d::Text::unit(
                     &**self.geng.default_font(),
                     format!("{}/{}", guy.health, guy.max_health),
-                    Rgba::GREEN,
+                    Hsva::new(
+                        guy.health as f32 / guy.max_health as f32 / 3.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                    )
+                    .into(),
                 )
-                .fit_into(hp_aabb.extend_uniform(-0.2)),
+                .fit_into(hp_text_aabb.extend_uniform(-0.2)),
+            );
+
+            let hp_bar_aabb = AABB::point(guy.position + vec2(0.0, Test::GUY_RADIUS) * 1.5)
+                .extend_symmetric(vec2(Test::GUY_RADIUS, Test::GUY_RADIUS * 0.1));
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Quad::new(hp_bar_aabb.extend_uniform(0.1), Rgba::BLACK),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Quad::new(hp_bar_aabb, Rgba::RED),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Quad::new(
+                    AABB {
+                        x_max: hp_bar_aabb.x_min
+                            + hp_bar_aabb.width() * guy.health as f32 / guy.max_health as f32,
+                        ..hp_bar_aabb
+                    },
+                    Rgba::GREEN,
+                ),
             );
         }
     }
