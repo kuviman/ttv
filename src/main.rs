@@ -10,6 +10,7 @@ struct Guy {
     position: Vec2<f32>,
 }
 
+#[derive(Debug)]
 struct Attack {
     attacker_id: Id,
     target_id: Id,
@@ -23,7 +24,8 @@ struct Test {
     next_id: Id,
     process_battle: bool,
     next_attack: Option<f32>,
-    attack: Option<Attack>,
+    attacks: Vec<Attack>,
+    queued_attack: Option<Attack>,
 }
 
 impl Test {
@@ -44,7 +46,8 @@ impl Test {
             framebuffer_size: vec2(1, 1),
             process_battle: false,
             next_attack: None,
-            attack: None,
+            attacks: vec![],
+            queued_attack: None,
         }
     }
 
@@ -102,8 +105,9 @@ impl Test {
         if let Some(time) = &mut self.next_attack {
             *time -= delta_time;
             if *time <= 0.0 {
-                let attack = self.attack.take().unwrap();
-                self.guys.get_mut(&attack.target_id).unwrap().health -= 1;
+                for attack in self.attacks.drain(..) {
+                    self.guys.get_mut(&attack.target_id).unwrap().health -= 1;
+                }
                 self.guys.retain(|guy| guy.health > 0);
                 self.next_attack = None;
             }
@@ -111,26 +115,55 @@ impl Test {
         if self.next_attack.is_some() {
             return;
         }
-        if self.guys.len() < 2 {
-            return;
-        }
 
         let guys: Vec<&Guy> = self.guys.iter().collect();
-        let target = guys
-            .choose_weighted(&mut global_rng(), |guy| guy.health)
-            .unwrap();
-        let target_id = target.id;
 
-        let attacker = guys
-            .iter()
-            .copied()
-            .filter(|guy| guy.id != target.id)
-            .min_by_key(|guy| r32((guy.position - target.position).len()))
-            .unwrap();
-        self.attack = Some(Attack {
-            attacker_id: attacker.id,
-            target_id: target.id,
-        });
+        'schedule_attacks: loop {
+            let new_attack = if let Some(attack) = self.queued_attack.take() {
+                attack
+            } else {
+                let mut healths = HashMap::new();
+                for guy in &self.guys {
+                    healths.insert(guy.id, guy.health);
+                }
+                for attack in &self.attacks {
+                    *healths.get_mut(&attack.target_id).unwrap() -= 1;
+                }
+                let target = if let Ok(target) =
+                    guys.choose_weighted(&mut global_rng(), |guy| healths[&guy.id])
+                {
+                    target
+                } else {
+                    break 'schedule_attacks;
+                };
+                let attacker = if let Some(attacker) = guys
+                    .iter()
+                    .copied()
+                    .filter(|guy| guy.id != target.id && healths[&guy.id] != 0)
+                    .min_by_key(|guy| r32((guy.position - target.position).len()))
+                {
+                    attacker
+                } else {
+                    break 'schedule_attacks;
+                };
+                Attack {
+                    attacker_id: attacker.id,
+                    target_id: target.id,
+                }
+            };
+            if self
+                .attacks
+                .iter()
+                .any(|current_attack| current_attack.attacker_id == new_attack.attacker_id)
+            {
+                println!("Queued {:?}", new_attack);
+                self.queued_attack = Some(new_attack);
+                break;
+            } else {
+                println!("Doing {:?}", new_attack);
+                self.attacks.push(new_attack);
+            }
+        }
         self.next_attack = Some(1.0);
     }
 }
@@ -139,7 +172,7 @@ impl geng::State for Test {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
-        if let Some(attack) = &self.attack {
+        for attack in &self.attacks {
             let attacker = self.guys.get(&attack.attacker_id).unwrap();
             let target = self.guys.get(&attack.target_id).unwrap();
             self.geng.draw_2d(
@@ -148,30 +181,21 @@ impl geng::State for Test {
                 &geng::draw_2d::Segment::new_gradient(
                     draw_2d::ColoredVertex {
                         a_pos: attacker.position,
-                        a_color: Rgba::WHITE,
+                        a_color: Rgba::new(1.0, 0.0, 0.0, 0.0),
                     },
                     draw_2d::ColoredVertex {
                         a_pos: target.position,
-                        a_color: Rgba::new(1.0, 0.5, 0.0, 1.0),
+                        a_color: Rgba::new(1.0, 0.0, 0.0, 1.0),
                     },
                     Test::GUY_RADIUS * 0.2,
                 ),
-            )
+            );
         }
         for guy in &self.guys {
-            let mut color = Rgba::WHITE;
-            if let Some(attack) = &self.attack {
-                if guy.id == attack.attacker_id {
-                    color = Rgba::YELLOW;
-                }
-                if guy.id == attack.target_id {
-                    color = Rgba::RED;
-                }
-            }
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &geng::draw_2d::Ellipse::circle(guy.position, Test::GUY_RADIUS, color),
+                &geng::draw_2d::Ellipse::circle(guy.position, Test::GUY_RADIUS, Rgba::WHITE),
             );
             self.geng.default_font().draw(
                 framebuffer,
