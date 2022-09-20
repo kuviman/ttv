@@ -278,6 +278,29 @@ impl geng::State for Test {
         let delta_time = delta_time as f32;
         self.process_movement(delta_time);
         self.process_attacks(delta_time);
+
+        let target_center = if self.guys.is_empty() {
+            None
+        } else {
+            let mut sum = Vec2::ZERO;
+            for guy in &self.guys {
+                sum += guy.position;
+            }
+            Some(sum / self.guys.len() as f32)
+        };
+
+        if let Some(target_center) = target_center {
+            self.camera.center += (target_center - self.camera.center) * delta_time;
+            let target_fov = self
+                .guys
+                .iter()
+                .map(|guy| r32((guy.position - target_center).len() + Self::GUY_RADIUS * 2.0))
+                .max()
+                .unwrap()
+                .raw()
+                * 2.0;
+            self.camera.fov += (target_fov - self.camera.fov) * delta_time;
+        }
     }
 }
 
