@@ -1,5 +1,12 @@
 use geng::prelude::*;
 
+#[derive(geng::Assets)]
+pub struct Assets {
+    pub hat: ugli::Texture,
+    pub face: ugli::Texture,
+    pub fireball: ugli::Texture,
+}
+
 type Id = i32;
 
 #[derive(HasId)]
@@ -18,6 +25,7 @@ struct Attack {
 
 struct Test {
     geng: Geng,
+    assets: Rc<Assets>,
     guys: Collection<Guy>,
     camera: geng::Camera2d,
     framebuffer_size: Vec2<usize>,
@@ -33,10 +41,11 @@ impl Test {
     const MIN_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
     const GUY_ACCELERATION: f32 = 10.0;
-    pub fn new(geng: &Geng) -> Self {
+    pub fn new(geng: &Geng, assets: &Rc<Assets>) -> Self {
         Self {
             next_id: 0,
             geng: geng.clone(),
+            assets: assets.clone(),
             guys: default(),
             camera: geng::Camera2d {
                 center: Vec2::ZERO,
@@ -103,7 +112,7 @@ impl Test {
             return;
         }
         if let Some(time) = &mut self.next_attack {
-            *time -= delta_time;
+            *time -= delta_time * 3.0;
             if *time <= 0.0 {
                 for attack in self.attacks.drain(..) {
                     self.guys.get_mut(&attack.target_id).unwrap().health -= 1;
@@ -129,6 +138,11 @@ impl Test {
                 for attack in &self.attacks {
                     *healths.get_mut(&attack.target_id).unwrap() -= 1;
                 }
+
+                if healths.values().filter(|health| **health == 0).count() != 0 {
+                    break 'schedule_attacks;
+                }
+
                 let target = if let Ok(target) =
                     guys.choose_weighted(&mut global_rng(), |guy| healths[&guy.id])
                 {
@@ -171,31 +185,41 @@ impl Test {
 impl geng::State for Test {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
-        ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
+        ugli::clear(framebuffer, Some("#73882C".try_into().unwrap()), None, None);
+
+        let t = 1.0 - self.next_attack.unwrap_or(0.0);
         for attack in &self.attacks {
             let attacker = self.guys.get(&attack.attacker_id).unwrap();
             let target = self.guys.get(&attack.target_id).unwrap();
+            let v = target.position - attacker.position;
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &geng::draw_2d::Segment::new_gradient(
-                    draw_2d::ColoredVertex {
-                        a_pos: attacker.position,
-                        a_color: Rgba::new(1.0, 0.0, 0.0, 0.0),
-                    },
-                    draw_2d::ColoredVertex {
-                        a_pos: target.position,
-                        a_color: Rgba::new(1.0, 0.0, 0.0, 1.0),
-                    },
-                    Test::GUY_RADIUS * 0.2,
-                ),
+                &draw_2d::TexturedQuad::new(
+                    AABB::point(vec2(0.0, 0.0)).extend_uniform(1.0),
+                    &self.assets.fireball,
+                )
+                .transform(Mat3::rotate(v.arg()))
+                .translate(attacker.position + v * t),
             );
         }
+
         for guy in &self.guys {
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &geng::draw_2d::Ellipse::circle(guy.position, Test::GUY_RADIUS, Rgba::WHITE),
+                &geng::draw_2d::TexturedQuad::new(
+                    AABB::point(guy.position).extend_uniform(Test::GUY_RADIUS),
+                    &self.assets.face,
+                ),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &geng::draw_2d::TexturedQuad::new(
+                    AABB::point(guy.position).extend_uniform(Test::GUY_RADIUS),
+                    &self.assets.hat,
+                ),
             );
             self.geng.default_font().draw(
                 framebuffer,
@@ -230,7 +254,7 @@ impl geng::State for Test {
                                 id,
                                 position,
                                 velocity: Vec2::ZERO,
-                                health: 1,
+                                health: 5,
                             });
                         }
                     }
@@ -260,5 +284,16 @@ impl geng::State for Test {
 fn main() {
     let geng = Geng::new("ttv");
     let geng = &geng;
-    geng::run(geng, Test::new(geng));
+    geng::run(
+        geng,
+        geng::LoadingScreen::new(
+            geng,
+            geng::EmptyLoadingScreen,
+            <Assets as geng::LoadAsset>::load(geng, &static_path()),
+            {
+                let geng = geng.clone();
+                move |assets| Test::new(&geng, &Rc::new(assets.unwrap()))
+            },
+        ),
+    );
 }
