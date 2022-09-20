@@ -15,12 +15,18 @@ struct Guy {
     health: usize,
     velocity: Vec2<f32>,
     position: Vec2<f32>,
+    spawn: f32,
 }
 
 #[derive(Debug)]
 struct Attack {
     attacker_id: Id,
     target_id: Id,
+}
+
+struct Circle {
+    center: Vec2<f32>,
+    radius: f32,
 }
 
 struct Test {
@@ -34,6 +40,7 @@ struct Test {
     next_attack: Option<f32>,
     attacks: Vec<Attack>,
     queued_attack: Option<Attack>,
+    circle: Circle,
 }
 
 impl Test {
@@ -57,31 +64,52 @@ impl Test {
             next_attack: None,
             attacks: vec![],
             queued_attack: None,
+            circle: Circle {
+                center: Vec2::ZERO,
+                radius: 1.0,
+            },
         }
     }
 
+    fn find_circle(&self) -> Option<Circle> {
+        let mut sum = Vec2::ZERO;
+        let mut sum_spawns = 0.0;
+        for guy in &self.guys {
+            sum += guy.position * guy.spawn;
+            sum_spawns += guy.spawn;
+        }
+        if sum_spawns == 0.0 {
+            return None;
+        }
+
+        let center = sum / sum_spawns;
+
+        let radius = self
+            .guys
+            .iter()
+            .map(|guy| r32(((guy.position - center).len() + Self::GUY_RADIUS * 2.0) * guy.spawn))
+            .max()
+            .unwrap()
+            .raw();
+        Some(Circle { center, radius })
+    }
+
     fn process_movement(&mut self, delta_time: f32) {
-        let ids = self.guys.ids().copied().collect::<Vec<_>>();
-        let center = if self.guys.is_empty() {
-            None
-        } else {
-            let mut sum = Vec2::ZERO;
-            for guy in &self.guys {
-                sum += guy.position;
-            }
-            Some(sum / self.guys.len() as f32)
+        let Circle { center, .. } = match self.find_circle() {
+            Some(circle) => circle,
+            None => return,
         };
+        let ids = self.guys.ids().copied().collect::<Vec<_>>();
+
         // Guys do be accelerating
         for id in &ids {
             let mut guy = self.guys.remove(id).unwrap();
-            if let Some(center) = center {
-                let target_velocity =
-                    (center - guy.position).normalize_or_zero() * Test::GUY_MAX_SPEED;
-                guy.velocity += (target_velocity - guy.velocity)
-                    .clamp_len(..=Test::GUY_ACCELERATION * delta_time);
-            }
+            let target_velocity = (center - guy.position).normalize_or_zero() * Test::GUY_MAX_SPEED;
+            guy.velocity +=
+                (target_velocity - guy.velocity).clamp_len(..=Test::GUY_ACCELERATION * delta_time);
             self.guys.insert(guy);
         }
+
         // Guys do be moving
         for guy in &mut self.guys {
             guy.position += guy.velocity * delta_time;
@@ -185,7 +213,17 @@ impl Test {
 impl geng::State for Test {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
-        ugli::clear(framebuffer, Some("#73882C".try_into().unwrap()), None, None);
+        ugli::clear(framebuffer, Some(Rgba::BLACK), None, None); //Some("#73882C".try_into().unwrap()), None, None);
+
+        self.geng.draw_2d(
+            framebuffer,
+            &self.camera,
+            &draw_2d::Ellipse::circle(
+                self.circle.center,
+                self.circle.radius,
+                "#73882C".try_into().unwrap(),
+            ),
+        );
 
         let t = 1.0 - self.next_attack.unwrap_or(0.0);
         for attack in &self.attacks {
@@ -255,6 +293,7 @@ impl geng::State for Test {
                                 position,
                                 velocity: Vec2::ZERO,
                                 health: 5,
+                                spawn: 0.0,
                             });
                         }
                     }
@@ -266,6 +305,25 @@ impl geng::State for Test {
                 }
             }
             geng::Event::KeyDown { key } => match key {
+                geng::Key::S => {
+                    let id = self.next_id;
+                    self.next_id += 1;
+                    self.guys.insert(Guy {
+                        id,
+                        position: self.camera.center
+                            + vec2(
+                                self.camera.fov / 2.0
+                                    * (self.framebuffer_size.x as f32
+                                        / self.framebuffer_size.y as f32)
+                                        .max(1.0),
+                                0.0,
+                            )
+                            .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
+                        velocity: Vec2::ZERO,
+                        health: 5,
+                        spawn: 0.0,
+                    });
+                }
                 geng::Key::Space => {
                     self.process_battle = !self.process_battle;
                 }
@@ -279,28 +337,17 @@ impl geng::State for Test {
         self.process_movement(delta_time);
         self.process_attacks(delta_time);
 
-        let target_center = if self.guys.is_empty() {
-            None
-        } else {
-            let mut sum = Vec2::ZERO;
-            for guy in &self.guys {
-                sum += guy.position;
-            }
-            Some(sum / self.guys.len() as f32)
-        };
-
-        if let Some(target_center) = target_center {
-            self.camera.center += (target_center - self.camera.center) * delta_time;
-            let target_fov = self
-                .guys
-                .iter()
-                .map(|guy| r32((guy.position - target_center).len() + Self::GUY_RADIUS * 2.0))
-                .max()
-                .unwrap()
-                .raw()
-                * 2.0;
-            self.camera.fov += (target_fov - self.camera.fov) * delta_time;
+        for guy in &mut self.guys {
+            guy.spawn = (guy.spawn + delta_time).min(1.0);
         }
+
+        if let Some(target_circle) = self.find_circle() {
+            self.circle.center += (target_circle.center - self.circle.center) * delta_time;
+            self.circle.radius += (target_circle.radius - self.circle.radius) * delta_time;
+        }
+        let target_fov = self.circle.radius * 2.0;
+        self.camera.center += (self.circle.center - self.camera.center) * delta_time;
+        self.camera.fov += (target_fov - self.camera.fov) * delta_time;
     }
 }
 
