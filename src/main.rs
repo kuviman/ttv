@@ -23,6 +23,7 @@ type Id = i32;
 #[derive(HasId)]
 struct Guy {
     id: Id,
+    name: String,
     health: usize,
     max_health: usize,
     velocity: Vec2<f32>,
@@ -320,6 +321,20 @@ impl geng::State for Test {
                     Rgba::GREEN,
                 ),
             );
+
+            let name_aabb = AABB::point(guy.position + vec2(0.0, Test::GUY_RADIUS) * 2.0)
+                .extend_symmetric(vec2(Test::GUY_RADIUS * 1.0, Test::GUY_RADIUS * 0.2));
+            // self.geng.draw_2d(
+            //     framebuffer,
+            //     &self.camera,
+            //     &draw_2d::Quad::new(name_aabb, Rgba::BLACK),
+            // );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
+                    .fit_into(name_aabb),
+            );
         }
     }
     fn handle_event(&mut self, event: geng::Event) {
@@ -352,6 +367,11 @@ impl geng::State for Test {
                     self.next_id += 1;
                     self.guys.insert(Guy {
                         id,
+                        name: global_rng()
+                            .sample_iter(rand::distributions::Alphanumeric)
+                            .map(|c| c as char)
+                            .take(global_rng().gen_range(5..=15))
+                            .collect(),
                         position: self.camera.center
                             + vec2(
                                 self.camera.fov / 2.0
