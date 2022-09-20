@@ -1,10 +1,21 @@
 use geng::prelude::*;
 
+#[derive(Deserialize, geng::Assets)]
+#[asset(json)]
+// #[asset(json)]
+pub struct Config {
+    pub background: Rgba<f32>,
+    pub circle: Rgba<f32>,
+    pub initial_health: usize,
+    pub health_increase_per_level: usize,
+}
+
 #[derive(geng::Assets)]
 pub struct Assets {
     pub hat: ugli::Texture,
     pub face: ugli::Texture,
     pub fireball: ugli::Texture,
+    pub config: Config,
 }
 
 type Id = i32;
@@ -13,6 +24,7 @@ type Id = i32;
 struct Guy {
     id: Id,
     health: usize,
+    max_health: usize,
     velocity: Vec2<f32>,
     position: Vec2<f32>,
     spawn: f32,
@@ -213,7 +225,7 @@ impl Test {
 impl geng::State for Test {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
-        ugli::clear(framebuffer, Some(Rgba::BLACK), None, None); //Some("#73882C".try_into().unwrap()), None, None);
+        ugli::clear(framebuffer, Some(self.assets.config.background), None, None);
 
         self.geng.draw_2d(
             framebuffer,
@@ -221,7 +233,7 @@ impl geng::State for Test {
             &draw_2d::Ellipse::circle(
                 self.circle.center,
                 self.circle.radius,
-                "#73882C".try_into().unwrap(),
+                self.assets.config.circle,
             ),
         );
 
@@ -259,14 +271,23 @@ impl geng::State for Test {
                     &self.assets.hat,
                 ),
             );
-            self.geng.default_font().draw(
+            let hp_aabb =
+                AABB::point(guy.position + vec2(-Test::GUY_RADIUS, Test::GUY_RADIUS) * 1.5)
+                    .extend_uniform(Test::GUY_RADIUS * 0.5);
+            self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &format!("{}", guy.health),
-                guy.position + vec2(0.0, Self::GUY_RADIUS * 1.1),
-                geng::TextAlign::CENTER,
-                Self::GUY_RADIUS,
-                Rgba::GREEN,
+                &draw_2d::Ellipse::unit(Rgba::BLACK).fit_into(hp_aabb),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Text::unit(
+                    &**self.geng.default_font(),
+                    format!("{}/{}", guy.health, guy.max_health),
+                    Rgba::GREEN,
+                )
+                .fit_into(hp_aabb.extend_uniform(-0.2)),
             );
         }
     }
@@ -283,18 +304,8 @@ impl geng::State for Test {
                         if let Some(guy) =
                             iter.find(|guy| (guy.position - position).len() < Test::GUY_RADIUS)
                         {
-                            guy.health += 1;
-                        } else {
-                            let id = self.next_id;
-                            self.next_id += 1;
-                            mem::drop(iter);
-                            self.guys.insert(Guy {
-                                id,
-                                position,
-                                velocity: Vec2::ZERO,
-                                health: 5,
-                                spawn: 0.0,
-                            });
+                            guy.health += self.assets.config.health_increase_per_level;
+                            guy.max_health += self.assets.config.health_increase_per_level;
                         }
                     }
                     geng::MouseButton::Right => {
@@ -320,7 +331,8 @@ impl geng::State for Test {
                             )
                             .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
                         velocity: Vec2::ZERO,
-                        health: 5,
+                        health: self.assets.config.initial_health,
+                        max_health: self.assets.config.initial_health,
                         spawn: 0.0,
                     });
                 }
@@ -345,7 +357,7 @@ impl geng::State for Test {
             self.circle.center += (target_circle.center - self.circle.center) * delta_time;
             self.circle.radius += (target_circle.radius - self.circle.radius) * delta_time;
         }
-        let target_fov = self.circle.radius * 2.0;
+        let target_fov = self.circle.radius * 2.5;
         self.camera.center += (self.circle.center - self.camera.center) * delta_time;
         self.camera.fov += (target_fov - self.camera.fov) * delta_time;
     }
