@@ -5,4 +5,6 @@ edition = "2021"
 
 [dependencies]
 geng = { git = "https://github.com/kuviman/geng" }
+twitch-irc = "4"
+tokio = { version = "1", features = ["rt-multi-thread"] }
 serde = "1"

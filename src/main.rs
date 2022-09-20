@@ -1,6 +1,11 @@
 use geng::prelude::*;
 
 mod font;
+mod twitch_bot;
+
+enum Message {
+    SomeoneWantsToFight { name: String },
+}
 
 #[derive(Deserialize, geng::Assets)]
 #[asset(json)]
@@ -44,7 +49,7 @@ struct Circle {
     radius: f32,
 }
 
-struct Test {
+struct RaffleRoyale {
     geng: Geng,
     assets: Rc<Assets>,
     guys: Collection<Guy>,
@@ -56,14 +61,15 @@ struct Test {
     attacks: Vec<Attack>,
     queued_attack: Option<Attack>,
     circle: Circle,
+    ttv_client: twitch_bot::Client,
 }
 
-impl Test {
+impl RaffleRoyale {
     const GUY_RADIUS: f32 = 1.0;
     const MIN_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
     const GUY_ACCELERATION: f32 = 10.0;
-    pub fn new(geng: &Geng, assets: &Rc<Assets>) -> Self {
+    pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: twitch_bot::Client) -> Self {
         Self {
             next_id: 0,
             geng: geng.clone(),
@@ -83,6 +89,7 @@ impl Test {
                 center: Vec2::ZERO,
                 radius: 1.0,
             },
+            ttv_client,
         }
     }
 
@@ -119,9 +126,10 @@ impl Test {
         // Guys do be accelerating
         for id in &ids {
             let mut guy = self.guys.remove(id).unwrap();
-            let target_velocity = (center - guy.position).normalize_or_zero() * Test::GUY_MAX_SPEED;
-            guy.velocity +=
-                (target_velocity - guy.velocity).clamp_len(..=Test::GUY_ACCELERATION * delta_time);
+            let target_velocity =
+                (center - guy.position).normalize_or_zero() * RaffleRoyale::GUY_MAX_SPEED;
+            guy.velocity += (target_velocity - guy.velocity)
+                .clamp_len(..=RaffleRoyale::GUY_ACCELERATION * delta_time);
             self.guys.insert(guy);
         }
 
@@ -135,9 +143,9 @@ impl Test {
             for other in &self.guys {
                 let delta_pos = guy.position - other.position;
                 let len = delta_pos.len();
-                if len < Test::MIN_DISTANCE {
+                if len < RaffleRoyale::MIN_DISTANCE {
                     let v = delta_pos.normalize_or_zero();
-                    moves.push((guy.id, v * (Test::MIN_DISTANCE - len) / 2.0));
+                    moves.push((guy.id, v * (RaffleRoyale::MIN_DISTANCE - len) / 2.0));
                     guy.velocity -= v * Vec2::dot(guy.velocity, v);
                 }
             }
@@ -223,9 +231,30 @@ impl Test {
         }
         self.next_attack = Some(1.0);
     }
+
+    fn spawn_guy(&mut self, name: String) {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.guys.insert(Guy {
+            id,
+            name,
+            position: self.camera.center
+                + vec2(
+                    self.camera.fov / 2.0
+                        * (self.framebuffer_size.x as f32 / self.framebuffer_size.y as f32)
+                            .max(1.0),
+                    0.0,
+                )
+                .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
+            velocity: Vec2::ZERO,
+            health: self.assets.config.initial_health,
+            max_health: self.assets.config.initial_health,
+            spawn: 0.0,
+        });
+    }
 }
 
-impl geng::State for Test {
+impl geng::State for RaffleRoyale {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(self.assets.config.background), None, None);
@@ -262,7 +291,7 @@ impl geng::State for Test {
                 framebuffer,
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::new(
-                    AABB::point(guy.position).extend_uniform(Test::GUY_RADIUS),
+                    AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
                     &self.assets.face,
                 ),
             );
@@ -270,13 +299,14 @@ impl geng::State for Test {
                 framebuffer,
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::new(
-                    AABB::point(guy.position).extend_uniform(Test::GUY_RADIUS),
+                    AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
                     &self.assets.hat,
                 ),
             );
-            let hp_text_aabb =
-                AABB::point(guy.position + vec2(-Test::GUY_RADIUS, Test::GUY_RADIUS) * 1.5)
-                    .extend_uniform(Test::GUY_RADIUS * 0.5);
+            let hp_text_aabb = AABB::point(
+                guy.position + vec2(-RaffleRoyale::GUY_RADIUS, RaffleRoyale::GUY_RADIUS) * 1.5,
+            )
+            .extend_uniform(RaffleRoyale::GUY_RADIUS * 0.5);
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
@@ -299,8 +329,11 @@ impl geng::State for Test {
                 .fit_into(hp_text_aabb.extend_uniform(-0.2)),
             );
 
-            let hp_bar_aabb = AABB::point(guy.position + vec2(0.0, Test::GUY_RADIUS) * 1.5)
-                .extend_symmetric(vec2(Test::GUY_RADIUS, Test::GUY_RADIUS * 0.1));
+            let hp_bar_aabb = AABB::point(guy.position + vec2(0.0, RaffleRoyale::GUY_RADIUS) * 1.5)
+                .extend_symmetric(vec2(
+                    RaffleRoyale::GUY_RADIUS,
+                    RaffleRoyale::GUY_RADIUS * 0.1,
+                ));
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
@@ -324,8 +357,11 @@ impl geng::State for Test {
                 ),
             );
 
-            let name_aabb = AABB::point(guy.position + vec2(0.0, Test::GUY_RADIUS) * 2.0)
-                .extend_symmetric(vec2(Test::GUY_RADIUS * 1.0, Test::GUY_RADIUS * 0.2));
+            let name_aabb = AABB::point(guy.position + vec2(0.0, RaffleRoyale::GUY_RADIUS) * 2.0)
+                .extend_symmetric(vec2(
+                    RaffleRoyale::GUY_RADIUS * 1.0,
+                    RaffleRoyale::GUY_RADIUS * 0.2,
+                ));
             // self.geng.draw_2d(
             //     framebuffer,
             //     &self.camera,
@@ -414,45 +450,30 @@ impl geng::State for Test {
                 match button {
                     geng::MouseButton::Left => {
                         let mut iter = self.guys.iter_mut();
-                        if let Some(guy) =
-                            iter.find(|guy| (guy.position - position).len() < Test::GUY_RADIUS)
+                        if let Some(guy) = iter
+                            .find(|guy| (guy.position - position).len() < RaffleRoyale::GUY_RADIUS)
                         {
                             guy.health += self.assets.config.health_increase_per_level;
                             guy.max_health += self.assets.config.health_increase_per_level;
                         }
                     }
                     geng::MouseButton::Right => {
-                        self.guys
-                            .retain(|guy| (guy.position - position).len() > Test::GUY_RADIUS);
+                        self.guys.retain(|guy| {
+                            (guy.position - position).len() > RaffleRoyale::GUY_RADIUS
+                        });
                     }
                     _ => {}
                 }
             }
             geng::Event::KeyDown { key } => match key {
                 geng::Key::S => {
-                    let id = self.next_id;
-                    self.next_id += 1;
-                    self.guys.insert(Guy {
-                        id,
-                        name: global_rng()
+                    self.spawn_guy(
+                        global_rng()
                             .sample_iter(rand::distributions::Alphanumeric)
                             .map(|c| c as char)
                             .take(global_rng().gen_range(5..=15))
                             .collect(),
-                        position: self.camera.center
-                            + vec2(
-                                self.camera.fov / 2.0
-                                    * (self.framebuffer_size.x as f32
-                                        / self.framebuffer_size.y as f32)
-                                        .max(1.0),
-                                0.0,
-                            )
-                            .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
-                        velocity: Vec2::ZERO,
-                        health: self.assets.config.initial_health,
-                        max_health: self.assets.config.initial_health,
-                        spawn: 0.0,
-                    });
+                    );
                 }
                 geng::Key::Space => {
                     self.process_battle = !self.process_battle;
@@ -483,10 +504,19 @@ impl geng::State for Test {
         }
         self.camera.center += (target_center - self.camera.center) * delta_time;
         self.camera.fov += (target_fov - self.camera.fov) * delta_time;
+
+        while let Some(message) = self.ttv_client.next_message() {
+            match message {
+                Message::SomeoneWantsToFight { name } => {
+                    self.spawn_guy(name);
+                }
+            }
+        }
     }
 }
 
 fn main() {
+    let ttv_client = twitch_bot::spawn();
     let geng = Geng::new("ttv");
     let geng = &geng;
     geng::run(
@@ -497,7 +527,7 @@ fn main() {
             <Assets as geng::LoadAsset>::load(geng, &static_path()),
             {
                 let geng = geng.clone();
-                move |assets| Test::new(&geng, &Rc::new(assets.unwrap()))
+                move |assets| RaffleRoyale::new(&geng, &Rc::new(assets.unwrap()), ttv_client)
             },
         ),
     );
