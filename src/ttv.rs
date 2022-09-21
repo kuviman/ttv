@@ -60,7 +60,7 @@ impl Client {
             let join_handle = tokio::spawn(async move {
                 // This loop (and the thread) will only stop when TwitchIRCClient is dropped
                 while let Some(message) = incoming_messages.recv().await {
-                    info!("{:?}", message);
+                    info!("{}", serde_json::to_string(&message).unwrap());
                     if let Err(e) = messages_sender.send(message) {
                         error!("{:?}", e);
                     }
