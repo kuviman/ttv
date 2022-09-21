@@ -497,13 +497,15 @@ impl geng::State for State {
                     if message.message_text.trim() == "!fight" {
                         if !self.process_battle {
                             if self.guys.iter().any(|guy| guy.name == name) {
-                                self.ttv_client.say("No cheating allowed 🚫");
+                                self.ttv_client.reply("No cheating allowed 🚫", &message);
                             } else {
                                 self.spawn_guy(name.to_owned());
                             }
                         } else {
-                            self.ttv_client
-                                .say("You can't join into an ongoing fight, sorry Kappa");
+                            self.ttv_client.reply(
+                                "You can't join into an ongoing fight, sorry Kappa",
+                                &message,
+                            );
                         }
                     }
                 }

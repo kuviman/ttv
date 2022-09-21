@@ -2,8 +2,9 @@ use super::*;
 
 use tokio::sync::mpsc::UnboundedReceiver;
 use twitch_irc::{
-    login::StaticLoginCredentials, message::ServerMessage, ClientConfig, SecureTCPTransport,
-    TwitchIRCClient,
+    login::StaticLoginCredentials,
+    message::{PrivmsgMessage, ServerMessage},
+    ClientConfig, SecureTCPTransport, TwitchIRCClient,
 };
 
 pub type Message = ServerMessage;
@@ -92,5 +93,9 @@ impl Client {
                 .say(self.channel_login.clone(), message.to_owned()),
         )
         .unwrap();
+    }
+
+    pub fn reply(&self, message: &str, to: &PrivmsgMessage) {
+        futures::executor::block_on(self.inner.reply_to_privmsg(message.to_owned(), to)).unwrap();
     }
 }
