@@ -23,7 +23,7 @@ pub struct Client {
     inner: TwitchIRCClient<SecureTCPTransport, StaticLoginCredentials>,
     messages: UnboundedReceiver<Message>,
 
-    // This should be dropped after `inner` (so the order of fields is important here),
+    // This should be dropped after TwitchIRCClient (so the order of fields is important here),
     // so that the stream of messages is ended and the thread will be stopped
     #[allow(dead_code)] // Used just for drop impl
     thread: ThreadJoinHandle,
@@ -57,6 +57,7 @@ impl Client {
         client.join(channel_login.clone()).unwrap();
         let async_thread = async move {
             let join_handle = tokio::spawn(async move {
+                // This loop (and the thread) will only stop when TwitchIRCClient is dropped
                 while let Some(message) = incoming_messages.recv().await {
                     info!("{:?}", message);
                     if let Err(e) = messages_sender.send(message) {
