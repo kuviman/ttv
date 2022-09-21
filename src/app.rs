@@ -497,7 +497,7 @@ impl geng::State for State {
                     if message.message_text.trim() == "!fight" {
                         if !self.process_battle {
                             if self.guys.iter().any(|guy| guy.name == name) {
-                                self.ttv_client.say("Not cheating allowed 🚫");
+                                self.ttv_client.say("No cheating allowed 🚫");
                             } else {
                                 self.spawn_guy(name.to_owned());
                             }
