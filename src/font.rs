@@ -65,21 +65,11 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Tex
 impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<F, T> {
     fn draw_2d_transformed(
         &self,
-        geng: &Geng,
+        _geng: &Geng,
         framebuffer: &mut ugli::Framebuffer,
         camera: &dyn geng::AbstractCamera2d,
         transform: Mat3<f32>,
     ) {
-        // self.font.borrow().draw_impl(
-        //     framebuffer,
-        //     camera,
-        //     transform * self.transform * self.into_unit_transform,
-        //     self.text.as_ref(),
-        //     vec2(0.0, 0.0),
-        //     SIZE_HACK,
-        //     self.color,
-        // );
-
         let transform = transform * self.inner.transform * self.inner.into_unit_transform;
         let size = 1000.0;
         let transform = transform * Mat3::scale_uniform(size);

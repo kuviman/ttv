@@ -9,7 +9,6 @@ pub enum Message {
 
 #[derive(Deserialize, geng::Assets)]
 #[asset(json)]
-// #[asset(json)]
 pub struct Config {
     pub background: Rgba<f32>,
     pub circle: Rgba<f32>,
@@ -362,22 +361,11 @@ impl geng::State for RaffleRoyale {
                     RaffleRoyale::GUY_RADIUS * 1.0,
                     RaffleRoyale::GUY_RADIUS * 0.2,
                 ));
-            // self.geng.draw_2d(
-            //     framebuffer,
-            //     &self.camera,
-            //     &draw_2d::Quad::new(name_aabb, Rgba::BLACK),
-            // );
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Text::unit(
-                    // &self.geng,
-                    &**self.geng.default_font(),
-                    &guy.name,
-                    // Rgba::WHITE,
-                    Rgba::BLACK,
-                )
-                .fit_into(name_aabb),
+                &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
+                    .fit_into(name_aabb),
             );
         }
 
