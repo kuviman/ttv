@@ -49,6 +49,7 @@ pub struct State {
     framebuffer_size: Vec2<usize>,
     next_id: Id,
     process_battle: bool,
+    winning_screen: bool,
     next_attack: Option<f32>,
     attacks: Vec<Attack>,
     queued_attack: Option<Attack>,
@@ -89,6 +90,7 @@ impl State {
                 radius: 1.0,
             },
             ttv_client,
+            winning_screen: false,
         }
     }
 
@@ -368,6 +370,7 @@ impl geng::State for State {
             fov: 15.0,
         };
         if !self.process_battle {
+            self.winning_screen = false;
             self.geng.draw_2d(
                 framebuffer,
                 &ui_camera,
@@ -395,6 +398,11 @@ impl geng::State for State {
             );
         } else if self.guys.len() == 1 {
             let winner = self.guys.iter().next().unwrap();
+            if !self.winning_screen {
+                self.ttv_client
+                    .say(&format!("Winner is {} 🎉", winner.name));
+                self.winning_screen = true;
+            }
             self.geng.draw_2d(
                 framebuffer,
                 &ui_camera,
