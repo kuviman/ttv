@@ -1,3 +1,5 @@
+use geng::prelude::ugli::draw;
+
 use super::*;
 
 #[derive(Deserialize, geng::Assets)]
@@ -55,6 +57,7 @@ pub struct State {
     queued_attack: Option<Attack>,
     circle: Circle,
     ttv_client: ttv::Client,
+    feed: Option<String>,
 }
 
 impl Drop for State {
@@ -91,6 +94,7 @@ impl State {
             },
             ttv_client,
             winning_screen: false,
+            feed: None,
         }
     }
 
@@ -161,6 +165,7 @@ impl State {
 
     fn process_attacks(&mut self, delta_time: f32) {
         if !self.process_battle {
+            self.feed = None;
             return;
         }
         if let Some(time) = &mut self.next_attack {
@@ -168,6 +173,11 @@ impl State {
             if *time <= 0.0 {
                 for attack in self.attacks.drain(..) {
                     self.guys.get_mut(&attack.target_id).unwrap().health -= 1;
+                }
+                for guy in &self.guys {
+                    if guy.health == 0 {
+                        self.feed = Some(format!("{} has been eliminated", guy.name));
+                    }
                 }
                 self.guys.retain(|guy| guy.health > 0);
                 self.next_attack = None;
@@ -432,6 +442,25 @@ impl geng::State for State {
                 .scale_uniform(0.5)
                 .translate(vec2(0.0, 2.5)),
             );
+        } else {
+            if let Some(feed) = &self.feed {
+                self.geng.default_font().draw(
+                    framebuffer,
+                    &ui_camera,
+                    feed,
+                    vec2(0.0, 6.0),
+                    geng::TextAlign::CENTER,
+                    1.0,
+                    Rgba::BLACK,
+                );
+                // self.geng.draw_2d(
+                //     framebuffer,
+                //     &ui_camera,
+                //     &draw_2d::Text::unit(&**self.geng.default_font(), feed, Rgba::BLACK)
+                //         .scale_uniform(0.5)
+                //         .translate(vec2(0.0, 6.0)),
+                // );
+            }
         }
     }
     fn handle_event(&mut self, event: geng::Event) {
