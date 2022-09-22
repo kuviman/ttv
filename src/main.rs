@@ -7,6 +7,9 @@ mod ttv;
 fn main() {
     logger::init().unwrap();
 
+    ttv::test();
+    return;
+
     ttv::refresh_token();
     let geng = Geng::new("ttv");
     let geng = &geng;
