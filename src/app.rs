@@ -43,6 +43,11 @@ struct Circle {
     radius: f32,
 }
 
+struct DelayedMessage {
+    time: f32,
+    message: String,
+}
+
 pub struct State {
     geng: Geng,
     assets: Rc<Assets>,
@@ -58,6 +63,8 @@ pub struct State {
     circle: Circle,
     ttv_client: ttv::Client,
     feed: Option<String>,
+    time: f32,
+    delayed_messages: Vec<DelayedMessage>,
 }
 
 impl Drop for State {
@@ -95,6 +102,8 @@ impl State {
             ttv_client,
             winning_screen: false,
             feed: None,
+            time: 0.0,
+            delayed_messages: vec![],
         }
     }
 
@@ -409,8 +418,10 @@ impl geng::State for State {
         } else if self.guys.len() == 1 {
             let winner = self.guys.iter().next().unwrap();
             if !self.winning_screen {
-                self.ttv_client
-                    .say(&format!("Winner is {} 🎉", winner.name));
+                self.delayed_messages.push(DelayedMessage {
+                    time: self.time + 5.0,
+                    message: format!("Winner is {} 🎉", winner.name),
+                });
                 self.winning_screen = true;
             }
             self.geng.draw_2d(
@@ -507,6 +518,16 @@ impl geng::State for State {
     }
     fn update(&mut self, delta_time: f64) {
         let delta_time = delta_time as f32;
+
+        self.time += delta_time;
+        for message in &self.delayed_messages {
+            if message.time <= self.time {
+                self.ttv_client.say(&message.message);
+            }
+        }
+        self.delayed_messages
+            .retain(|message| message.time > self.time);
+
         self.process_movement(delta_time);
         self.process_attacks(delta_time);
 
