@@ -8,3 +8,5 @@ geng = { git = "https://github.com/kuviman/geng" }
 twitch-irc = { version = "4", features = ["with-serde"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 serde = "1"
+websocket-lite = "0.5"
+reqwest = "0.11"

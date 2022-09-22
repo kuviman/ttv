@@ -99,3 +99,49 @@ impl Client {
         futures::executor::block_on(self.inner.reply_to_privmsg(message.to_owned(), to)).unwrap();
     }
 }
+
+#[derive(Deserialize)]
+struct TokenData {
+    access_token: String,
+    refresh_token: String,
+}
+
+fn read_file(path: &str) -> String {
+    let mut result = String::new();
+    std::fs::File::open(path)
+        .unwrap()
+        .read_to_string(&mut result)
+        .unwrap();
+    result
+}
+
+pub fn refresh_token() {
+    let token_data: TokenData =
+        serde_json::from_reader(std::fs::File::open("secret/token.json").unwrap()).unwrap();
+    std::fs::copy("secret/token.json", "secret/old_token.json").unwrap();
+    let mut form = HashMap::new();
+    form.insert("client_id", read_file("secret/client_id"));
+    form.insert("client_secret", read_file("secret/client_secret"));
+    form.insert("grant_type", "refresh_token".to_owned());
+    form.insert("refresh_token", token_data.refresh_token);
+
+    let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let new_token_data = tokio_runtime.block_on(async {
+        reqwest::Client::new()
+            .post("https://id.twitch.tv/oauth2/token")
+            .form(&form)
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap()
+    });
+    std::fs::File::create("secret/token.json")
+        .unwrap()
+        .write_all(new_token_data.as_bytes())
+        .unwrap();
+}
