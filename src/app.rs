@@ -550,7 +550,7 @@ impl geng::State for State {
 
         while let Some(message) = self.ttv_client.next_message() {
             match message {
-                ttv::Message::Privmsg(message) => {
+                ttv::Message::Irc(ttv::IrcMessage::Privmsg(message)) => {
                     let name = message.sender.name.as_str();
                     if message.message_text.trim() == "!fight" {
                         if !self.process_battle {
@@ -564,6 +564,17 @@ impl geng::State for State {
                                 "You can't join into an ongoing fight, sorry Kappa",
                                 &message,
                             );
+                        }
+                    }
+                }
+                ttv::Message::RewardRedemption { name, reward } => {
+                    if reward == "Raffle Royale Level Up" {
+                        if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                            guy.health += self.assets.config.health_increase_per_level;
+                            guy.max_health += self.assets.config.health_increase_per_level;
+                        } else {
+                            self.ttv_client
+                                .say(&format!("{} is not in the raffle royale", name));
                         }
                     }
                 }

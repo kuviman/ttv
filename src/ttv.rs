@@ -1,13 +1,19 @@
 use super::*;
 
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use twitch_irc::{
     login::StaticLoginCredentials,
     message::{PrivmsgMessage, ServerMessage},
     ClientConfig, SecureTCPTransport, TwitchIRCClient,
 };
 
-pub type Message = ServerMessage;
+pub type IrcMessage = ServerMessage;
+
+#[derive(Debug)]
+pub enum Message {
+    Irc(ServerMessage),
+    RewardRedemption { name: String, reward: String },
+}
 
 // Lets join thread on drop so we shutdown without missing anything
 struct ThreadJoinHandle {
@@ -56,23 +62,28 @@ impl Client {
         let (messages_sender, messages_receiver) = tokio::sync::mpsc::unbounded_channel();
 
         client.join(channel_login.clone()).unwrap();
-        let async_thread = async move {
-            let join_handle = tokio::spawn(async move {
-                // This loop (and the thread) will only stop when TwitchIRCClient is dropped
-                while let Some(message) = incoming_messages.recv().await {
-                    info!("{}", serde_json::to_string(&message).unwrap());
-                    if let Err(e) = messages_sender.send(message) {
-                        error!("{:?}", e);
+        let async_thread = {
+            let messages_sender = messages_sender.clone();
+            async move {
+                let join_handle = tokio::spawn(async move {
+                    // This loop (and the thread) will only stop when TwitchIRCClient is dropped
+                    while let Some(message) = incoming_messages.recv().await {
+                        info!("{}", serde_json::to_string(&message).unwrap());
+                        if let Err(e) = messages_sender.send(Message::Irc(message)) {
+                            error!("{:?}", e);
+                        }
                     }
-                }
-            });
-            join_handle.await.unwrap();
+                });
+                join_handle.await.unwrap();
+            }
         };
         let thread = std::thread::spawn(move || {
             info!("Ttv client thread started");
             tokio_runtime.block_on(async_thread);
             info!("Ttv client thread stopped");
         });
+
+        std::thread::spawn(move || pubsub(messages_sender));
 
         Self {
             channel_login: channel_login.clone(),
@@ -144,4 +155,119 @@ pub fn refresh_token() {
         .unwrap()
         .write_all(new_token_data.as_bytes())
         .unwrap();
+}
+
+fn pubsub(sender: UnboundedSender<Message>) {
+    let token_data: ttv::TokenData =
+        serde_json::from_reader(std::fs::File::open("secret/token.json").unwrap()).unwrap();
+    let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let user_id = tokio_runtime.block_on(async {
+        info!("Sending request");
+        let json = reqwest::Client::new()
+            .get("https://api.twitch.tv/helix/users")
+            .query(&[("login", "kuviman")])
+            .header(
+                "Authorization",
+                format!("Bearer {}", token_data.access_token),
+            )
+            .header("Client-ID", read_file("secret/client_id"))
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        serde_json::from_str::<serde_json::Value>(&json)
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .get("data")
+            .unwrap()
+            .as_array()
+            .unwrap()[0]
+            .as_object()
+            .unwrap()
+            .get("id")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_owned()
+    });
+
+    let mut ws = websocket_lite::ClientBuilder::new("wss://pubsub-edge.twitch.tv")
+        .unwrap()
+        .connect()
+        .unwrap();
+    let request = serde_json::json!({
+        "type": "LISTEN",
+        "nonce": "kekw",
+        "data": {
+            "topics": [format!("channel-points-channel-v1.{}", user_id)],
+            "auth_token": token_data.access_token,
+        }
+    });
+    ws.send(websocket_lite::Message::text(
+        serde_json::to_string(&request).unwrap(),
+    ))
+    .unwrap();
+    while let Ok(Some(message)) = ws.receive() {
+        let message = serde_json::from_str::<serde_json::Value>(message.as_text().unwrap())
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .clone();
+        if message.get("type").unwrap() == "MESSAGE" {
+            let message = message
+                .get("data")
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .get("message")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned();
+            let message = serde_json::from_str::<serde_json::Value>(&message)
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .clone();
+            let data = message
+                .get("data")
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .get("redemption")
+                .unwrap()
+                .as_object()
+                .unwrap();
+            let name = data
+                .get("user")
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .get("display_name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned();
+            let reward = data
+                .get("reward")
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .get("title")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned();
+            info!("{} redeemed {}", name, reward);
+            sender
+                .send(Message::RewardRedemption { name, reward })
+                .unwrap();
+        }
+    }
 }
