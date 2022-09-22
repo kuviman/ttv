@@ -330,9 +330,9 @@ pub struct Tokens {
     refresh_token: String,
 }
 
-/// Acquire user access token using authorization code grant flow
+/// Authenticate using authorization code grant flow
 /// <https://dev.twitch.tv/docs/authentication/getting-tokens-oauth#authorization-code-grant-flow>
-async fn acquire_user_access_token(
+async fn authenticate(
     client_id: &str,
     client_secret: &str,
     force_verify: bool,
@@ -416,7 +416,7 @@ pub fn test() {
     let client_secret = read_file("secret/client_secret");
     info!(
         "{:?}",
-        block_on(acquire_user_access_token(
+        block_on(authenticate(
             &client_id,
             &client_secret,
             true,
