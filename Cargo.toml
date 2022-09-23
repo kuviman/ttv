@@ -14,4 +14,4 @@ url = "2"
 open = "3"
 eyre = "0.6"
 hyper = { version = "0.14", features = ["server"] }
-sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "any"] }
+sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "all-databases"] }

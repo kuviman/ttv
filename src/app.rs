@@ -1,5 +1,3 @@
-use geng::prelude::ugli::draw;
-
 use super::*;
 
 #[derive(Deserialize, geng::Assets)]
@@ -10,6 +8,7 @@ pub struct Config {
     pub initial_health: usize,
     pub health_increase_per_level: usize,
     pub volume: f64,
+    pub database: String,
 }
 
 #[derive(geng::Assets)]
@@ -80,6 +79,7 @@ pub struct State {
     lobby_music: geng::SoundEffect,
     battle_music: geng::SoundEffect,
     battle_fade: f32,
+    db: Db,
 }
 
 impl Drop for State {
@@ -101,6 +101,7 @@ impl State {
         let mut battle_music = assets.battle_music.effect();
         battle_music.set_volume(0.0);
         battle_music.play();
+
         Self {
             next_id: 0,
             geng: geng.clone(),
@@ -128,6 +129,7 @@ impl State {
             lobby_music,
             battle_music,
             battle_fade: 0.0,
+            db: Db::new(&assets.config.database),
         }
     }
 
@@ -277,6 +279,9 @@ impl State {
     }
 
     fn spawn_guy(&mut self, name: String) {
+        let level = self.db.find_level(&name);
+        let health = self.assets.config.initial_health
+            + level * self.assets.config.health_increase_per_level;
         let id = self.next_id;
         self.next_id += 1;
         self.guys.insert(Guy {
@@ -291,8 +296,8 @@ impl State {
                 )
                 .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
             velocity: Vec2::ZERO,
-            health: self.assets.config.initial_health,
-            max_health: self.assets.config.initial_health,
+            health,
+            max_health: health,
             spawn: 0.0,
         });
     }
@@ -587,19 +592,31 @@ impl geng::State for State {
             match message {
                 api::Message::Irc(api::IrcMessage::Privmsg(message)) => {
                     let name = message.sender.name.as_str();
-                    if message.message_text.trim() == "!fight" {
-                        if !self.process_battle {
-                            if self.guys.iter().any(|guy| guy.name == name) {
-                                self.ttv_client.reply("No cheating allowed 🚫", &message);
+                    match message.message_text.trim() {
+                        "!fight" => {
+                            if !self.process_battle {
+                                if self.guys.iter().any(|guy| guy.name == name) {
+                                    self.ttv_client.reply("No cheating allowed 🚫", &message);
+                                } else {
+                                    self.spawn_guy(name.to_owned());
+                                }
                             } else {
-                                self.spawn_guy(name.to_owned());
+                                self.ttv_client.reply(
+                                    "You can't join into an ongoing fight, sorry Kappa",
+                                    &message,
+                                );
                             }
-                        } else {
+                        }
+                        "!lvl" | "!level" => {
+                            let level = self.db.find_level(&name);
+                            let hp = self.assets.config.initial_health
+                                + level * self.assets.config.health_increase_per_level;
                             self.ttv_client.reply(
-                                "You can't join into an ongoing fight, sorry Kappa",
+                                &format!("You are level {} ({} hp) ⭐", level, hp),
                                 &message,
                             );
                         }
+                        _ => {}
                     }
                 }
                 api::Message::RewardRedemption { name, reward } => {
@@ -607,10 +624,13 @@ impl geng::State for State {
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                             guy.health += self.assets.config.health_increase_per_level;
                             guy.max_health += self.assets.config.health_increase_per_level;
-                        } else {
-                            self.ttv_client
-                                .say(&format!("{} is not in the raffle royale", name));
                         }
+                        let level = self.db.find_level(&name) + 1;
+                        self.db.set_level(&name, level);
+                        let hp = self.assets.config.initial_health
+                            + level * self.assets.config.health_increase_per_level;
+                        self.ttv_client
+                            .say(&format!("{} is now level {} ({} hp) ⭐", name, level, hp));
                     }
                 }
                 _ => {}

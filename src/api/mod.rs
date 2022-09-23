@@ -325,11 +325,3 @@ async fn wait_for_request_uri() -> eyre::Result<Url> {
         .unwrap()
         .join(&uri.path_and_query().unwrap().as_str())?)
 }
-
-fn block_on<F: Future>(future: F) -> F::Output {
-    let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-    tokio_runtime.block_on(future)
-}
