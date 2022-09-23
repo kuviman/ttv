@@ -21,10 +21,10 @@ impl Db {
                 .await
                 .expect("Failed to connect to database");
             let idle_connection = pool.acquire().await.unwrap();
-            sqlx::query(include_str!("setup.sql"))
-                .execute(&pool)
+            sqlx::migrate!()
+                .run(&pool)
                 .await
-                .unwrap();
+                .expect("Failed to run migrations");
             Self {
                 pool,
                 idle_connection,
@@ -33,7 +33,7 @@ impl Db {
     }
     pub fn find_level(&mut self, name: &str) -> usize {
         let result: Option<(i64,)> = block_on(
-            sqlx::query_as("SELECT level from Persons WHERE name=?")
+            sqlx::query_as("SELECT `level` FROM `Guy` WHERE `name`=?")
                 .bind(name)
                 .fetch_optional(&self.pool),
         )
@@ -47,7 +47,7 @@ impl Db {
     }
     pub fn set_level(&mut self, name: &str, level: usize) {
         block_on(async {
-            if sqlx::query("UPDATE Persons SET level=? WHERE name=?")
+            if sqlx::query("UPDATE `Guy` SET `level`=? WHERE `name`=?")
                 .bind(level as i64)
                 .bind(name)
                 .execute(&self.pool)
@@ -56,7 +56,7 @@ impl Db {
                 .rows_affected()
                 == 0
             {
-                sqlx::query("INSERT INTO Persons VALUES (?, ?)")
+                sqlx::query("INSERT INTO `Guy` VALUES (?, ?)")
                     .bind(name)
                     .bind(level as i64)
                     .execute(&self.pool)
