@@ -21,12 +21,14 @@ pub struct Assets {
     pub lobby_music: geng::Sound,
     #[asset(path = "kuvimanBattle.wav")]
     pub battle_music: geng::Sound,
-    #[asset(path = "spawn1.mp3")]
-    pub spawn_effect: geng::Sound,
+    #[asset(range = "1..=3", path = "player_joined*.mp3")]
+    pub spawn_sfx: Vec<geng::Sound>,
     #[asset(path = "death.wav")]
-    pub death_effect: geng::Sound,
+    pub death_sfx: geng::Sound,
     #[asset(path = "victory.mp3")]
-    pub win_effect: geng::Sound,
+    pub win_sfx: geng::Sound,
+    #[asset(path = "RaffleRoyaleTitle.wav")]
+    pub title_sfx: geng::Sound,
 }
 
 impl Assets {
@@ -221,7 +223,7 @@ impl State {
                     if guy.health == 0 {
                         self.feed = Some(format!("{} has been eliminated", guy.name));
 
-                        let mut sound_effect = self.assets.death_effect.effect();
+                        let mut sound_effect = self.assets.death_sfx.effect();
                         sound_effect.set_volume(self.assets.config.volume);
                         sound_effect.play();
                     }
@@ -313,7 +315,12 @@ impl State {
             spawn: 0.0,
         });
 
-        let mut sound_effect = self.assets.spawn_effect.effect();
+        let mut sound_effect = self
+            .assets
+            .spawn_sfx
+            .choose(&mut global_rng())
+            .unwrap()
+            .effect();
         sound_effect.set_volume(self.assets.config.volume);
         sound_effect.play();
     }
@@ -468,7 +475,7 @@ impl geng::State for State {
                     message: format!("Winner is {} 🎉", winner.name),
                 });
                 self.winning_screen = true;
-                let mut sound_effect = self.assets.win_effect.effect();
+                let mut sound_effect = self.assets.win_sfx.effect();
                 sound_effect.set_volume(self.assets.config.volume);
                 sound_effect.play();
             }
@@ -622,7 +629,7 @@ impl geng::State for State {
                 api::Message::Irc(api::IrcMessage::Privmsg(message)) => {
                     let name = message.sender.name.as_str();
                     match message.message_text.trim() {
-                        "!fight" => {
+                        "!fight" | "!join" => {
                             if !self.process_battle {
                                 if self.guys.iter().any(|guy| guy.name == name) {
                                     self.ttv_client.reply("No cheating allowed 🚫", &message);
