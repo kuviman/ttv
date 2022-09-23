@@ -79,7 +79,7 @@ pub struct State {
     attacks: Vec<Attack>,
     queued_attack: Option<Attack>,
     circle: Circle,
-    ttv_client: api::Client,
+    ttv_client: ttv::Client,
     feed: Option<String>,
     time: f32,
     delayed_messages: Vec<DelayedMessage>,
@@ -101,7 +101,7 @@ impl State {
     const MIN_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
     const GUY_ACCELERATION: f32 = 10.0;
-    pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: api::Client) -> Self {
+    pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: ttv::Client) -> Self {
         ttv_client.say("Hai, im online 🤖");
         let mut lobby_music = assets.lobby_music.effect();
         lobby_music.set_volume(0.0);
@@ -625,7 +625,7 @@ impl geng::State for State {
 
         while let Some(message) = self.ttv_client.next_message() {
             match message {
-                api::Message::Irc(api::IrcMessage::Privmsg(message)) => {
+                ttv::Message::Irc(ttv::IrcMessage::Privmsg(message)) => {
                     let name = message.sender.name.as_str();
                     match message.message_text.trim() {
                         "!fight" | "!join" => {
@@ -654,7 +654,7 @@ impl geng::State for State {
                         _ => {}
                     }
                 }
-                api::Message::RewardRedemption { name, reward } => {
+                ttv::Message::RewardRedemption { name, reward } => {
                     if reward == "Raffle Royale Level Up" {
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                             guy.health += self.assets.config.health_increase_per_level;

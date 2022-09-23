@@ -154,7 +154,7 @@ pub fn refresh_token() {
 
 fn pubsub(sender: UnboundedSender<Message>) {
     let secrets = secret::Config::read().unwrap();
-    let token_data: api::TokenData =
+    let token_data: ttv::TokenData =
         serde_json::from_reader(std::fs::File::open("secret/token.json").unwrap()).unwrap();
     let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

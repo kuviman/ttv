@@ -1,10 +1,10 @@
 use geng::prelude::*;
 
-mod api;
 mod app;
 mod db;
 mod font;
 mod secret;
+mod ttv;
 mod util;
 
 use db::Db;
@@ -13,7 +13,7 @@ use util::*;
 fn main() {
     logger::init().unwrap();
 
-    api::refresh_token();
+    ttv::refresh_token();
     let geng = Geng::new("ttv");
     let geng = &geng;
     geng::run(
@@ -27,7 +27,7 @@ fn main() {
                 move |assets| {
                     let mut assets = assets.unwrap();
                     assets.process();
-                    app::State::new(&geng, &Rc::new(assets), api::Client::new())
+                    app::State::new(&geng, &Rc::new(assets), ttv::Client::new())
                 }
             },
         ),
