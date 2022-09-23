@@ -18,7 +18,11 @@ fn main() {
             <app::Assets as geng::LoadAsset>::load(geng, &static_path()),
             {
                 let geng = geng.clone();
-                move |assets| app::State::new(&geng, &Rc::new(assets.unwrap()), api::Client::new())
+                move |assets| {
+                    let mut assets = assets.unwrap();
+                    assets.process();
+                    app::State::new(&geng, &Rc::new(assets), api::Client::new())
+                }
             },
         ),
     );

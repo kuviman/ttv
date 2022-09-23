@@ -2,5 +2,6 @@
     "background": "#050",
     "circle": "#0a0",
     "initial_health": 5,
-    "health_increase_per_level": 5
+    "health_increase_per_level": 5,
+    "volume": 0.1
 }

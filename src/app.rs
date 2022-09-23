@@ -9,6 +9,7 @@ pub struct Config {
     pub circle: Rgba<f32>,
     pub initial_health: usize,
     pub health_increase_per_level: usize,
+    pub volume: f64,
 }
 
 #[derive(geng::Assets)]
@@ -17,6 +18,17 @@ pub struct Assets {
     pub face: ugli::Texture,
     pub fireball: ugli::Texture,
     pub config: Config,
+    #[asset(path = "lobby.mp3")]
+    pub lobby_music: geng::Sound,
+    #[asset(path = "battle.mp3")]
+    pub battle_music: geng::Sound,
+}
+
+impl Assets {
+    pub fn process(&mut self) {
+        self.lobby_music.looped = true;
+        self.battle_music.looped = true;
+    }
 }
 
 type Id = i32;
@@ -65,6 +77,9 @@ pub struct State {
     feed: Option<String>,
     time: f32,
     delayed_messages: Vec<DelayedMessage>,
+    lobby_music: geng::SoundEffect,
+    battle_music: geng::SoundEffect,
+    battle_fade: f32,
 }
 
 impl Drop for State {
@@ -80,6 +95,12 @@ impl State {
     const GUY_ACCELERATION: f32 = 10.0;
     pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: api::Client) -> Self {
         ttv_client.say("Hai, im online 🤖");
+        let mut lobby_music = assets.lobby_music.effect();
+        lobby_music.set_volume(0.0);
+        lobby_music.play();
+        let mut battle_music = assets.battle_music.effect();
+        battle_music.set_volume(0.0);
+        battle_music.play();
         Self {
             next_id: 0,
             geng: geng.clone(),
@@ -104,6 +125,9 @@ impl State {
             feed: None,
             time: 0.0,
             delayed_messages: vec![],
+            lobby_music,
+            battle_music,
+            battle_fade: 0.0,
         }
     }
 
@@ -518,6 +542,17 @@ impl geng::State for State {
     }
     fn update(&mut self, delta_time: f64) {
         let delta_time = delta_time as f32;
+
+        if self.process_battle {
+            self.battle_fade += delta_time;
+        } else {
+            self.battle_fade -= delta_time;
+        }
+        self.battle_fade = self.battle_fade.clamp(0.0, 1.0);
+        self.battle_music
+            .set_volume(self.battle_fade as f64 * self.assets.config.volume);
+        self.lobby_music
+            .set_volume((1.0 - self.battle_fade as f64) * self.assets.config.volume);
 
         self.time += delta_time;
         for message in &self.delayed_messages {
