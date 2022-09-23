@@ -21,6 +21,12 @@ pub struct Assets {
     pub lobby_music: geng::Sound,
     #[asset(path = "battle.mp3")]
     pub battle_music: geng::Sound,
+    #[asset(path = "spawn1.mp3")]
+    pub spawn_effect: geng::Sound,
+    #[asset(path = "death.wav")]
+    pub death_effect: geng::Sound,
+    #[asset(path = "victory.mp3")]
+    pub win_effect: geng::Sound,
 }
 
 impl Assets {
@@ -79,6 +85,7 @@ pub struct State {
     lobby_music: geng::SoundEffect,
     battle_music: geng::SoundEffect,
     battle_fade: f32,
+    victory_fade: f32,
     db: Db,
 }
 
@@ -130,6 +137,7 @@ impl State {
             battle_music,
             battle_fade: 0.0,
             db: Db::new(&assets.config.database),
+            victory_fade: 0.0,
         }
     }
 
@@ -212,6 +220,10 @@ impl State {
                 for guy in &self.guys {
                     if guy.health == 0 {
                         self.feed = Some(format!("{} has been eliminated", guy.name));
+
+                        let mut sound_effect = self.assets.death_effect.effect();
+                        sound_effect.set_volume(self.assets.config.volume);
+                        sound_effect.play();
                     }
                 }
                 self.guys.retain(|guy| guy.health > 0);
@@ -300,6 +312,10 @@ impl State {
             max_health: health,
             spawn: 0.0,
         });
+
+        let mut sound_effect = self.assets.spawn_effect.effect();
+        sound_effect.set_volume(self.assets.config.volume);
+        sound_effect.play();
     }
 }
 
@@ -452,6 +468,9 @@ impl geng::State for State {
                     message: format!("Winner is {} 🎉", winner.name),
                 });
                 self.winning_screen = true;
+                let mut sound_effect = self.assets.win_effect.effect();
+                sound_effect.set_volume(self.assets.config.volume);
+                sound_effect.play();
             }
             self.geng.draw_2d(
                 framebuffer,
@@ -556,12 +575,16 @@ impl geng::State for State {
         };
         if self.process_battle {
             self.battle_fade += delta_time;
+            if self.guys.len() == 1 {
+                self.victory_fade = (self.victory_fade + delta_time).min(1.0);
+            }
         } else {
+            self.victory_fade = 0.0;
             self.battle_fade -= delta_time;
         }
         self.battle_fade = self.battle_fade.clamp(0.0, 1.0);
         self.battle_music
-            .set_volume(self.battle_fade as f64 * volume);
+            .set_volume(self.battle_fade as f64 * volume * (1.0 - self.victory_fade as f64));
         self.lobby_music
             .set_volume((1.0 - self.battle_fade as f64) * volume);
 
