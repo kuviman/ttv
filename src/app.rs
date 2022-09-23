@@ -548,6 +548,12 @@ impl geng::State for State {
     fn update(&mut self, delta_time: f64) {
         let delta_time = delta_time as f32;
 
+        // TODO: window.is_minimized?
+        let volume = if self.geng.window().real_size() == vec2(0, 0) {
+            0.0
+        } else {
+            self.assets.config.volume
+        };
         if self.process_battle {
             self.battle_fade += delta_time;
         } else {
@@ -555,9 +561,9 @@ impl geng::State for State {
         }
         self.battle_fade = self.battle_fade.clamp(0.0, 1.0);
         self.battle_music
-            .set_volume(self.battle_fade as f64 * self.assets.config.volume);
+            .set_volume(self.battle_fade as f64 * volume);
         self.lobby_music
-            .set_volume((1.0 - self.battle_fade as f64) * self.assets.config.volume);
+            .set_volume((1.0 - self.battle_fade as f64) * volume);
 
         self.time += delta_time;
         for message in &self.delayed_messages {
