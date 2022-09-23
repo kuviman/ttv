@@ -120,22 +120,14 @@ struct TokenData {
     refresh_token: String,
 }
 
-fn read_file(path: &str) -> String {
-    let mut result = String::new();
-    std::fs::File::open(path)
-        .unwrap()
-        .read_to_string(&mut result)
-        .unwrap();
-    result
-}
-
 pub fn refresh_token() {
+    let secrets = secret::Config::read().unwrap();
     let token_data: TokenData =
         serde_json::from_reader(std::fs::File::open("secret/token.json").unwrap()).unwrap();
     std::fs::copy("secret/token.json", "secret/old_token.json").unwrap();
     let mut form = HashMap::new();
-    form.insert("client_id", read_file("secret/client_id"));
-    form.insert("client_secret", read_file("secret/client_secret"));
+    form.insert("client_id", secrets.ttv.client_id);
+    form.insert("client_secret", secrets.ttv.client_secret);
     form.insert("grant_type", "refresh_token".to_owned());
     form.insert("refresh_token", token_data.refresh_token);
 
@@ -161,6 +153,7 @@ pub fn refresh_token() {
 }
 
 fn pubsub(sender: UnboundedSender<Message>) {
+    let secrets = secret::Config::read().unwrap();
     let token_data: api::TokenData =
         serde_json::from_reader(std::fs::File::open("secret/token.json").unwrap()).unwrap();
     let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
@@ -176,7 +169,7 @@ fn pubsub(sender: UnboundedSender<Message>) {
                 "Authorization",
                 format!("Bearer {}", token_data.access_token),
             )
-            .header("Client-ID", read_file("secret/client_id"))
+            .header("Client-ID", secrets.ttv.client_id)
             .send()
             .await
             .unwrap()

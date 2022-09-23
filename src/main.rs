@@ -4,20 +4,11 @@ mod api;
 mod app;
 mod db;
 mod font;
+mod secret;
+mod util;
 
 use db::Db;
-
-fn block_on<F: Future>(future: F) -> F::Output {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        handle.block_on(future)
-    } else {
-        let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        tokio_runtime.block_on(future)
-    }
-}
+use util::*;
 
 fn main() {
     logger::init().unwrap();

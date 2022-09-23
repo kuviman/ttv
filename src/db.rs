@@ -1,30 +1,41 @@
-use sqlx::{ConnectOptions, Executor};
-
 use super::*;
 
 pub struct Db {
-    connection: sqlx::SqliteConnection,
+    pool: sqlx::AnyPool,
+
+    // Idle connection is there for sqlite::memory: db
+    // Otherwise db is wiped when all connections get closed
+    #[allow(dead_code)]
+    idle_connection: sqlx::pool::PoolConnection<sqlx::Any>,
 }
 
 impl Db {
+    /// Connect to db
+    ///
+    /// Example urls:
+    /// - `sqlite::memory:`
+    /// - `sqlite://data.db?mode=rwc`
     pub fn new(url: &str) -> Self {
         block_on(async {
-            let mut connection = url
-                .parse::<sqlx::sqlite::SqliteConnectOptions>()
-                .unwrap()
-                .create_if_missing(true)
-                .connect()
+            let pool = sqlx::AnyPool::connect(url)
+                .await
+                .expect("Failed to connect to database");
+            let idle_connection = pool.acquire().await.unwrap();
+            sqlx::query(include_str!("setup.sql"))
+                .execute(&pool)
                 .await
                 .unwrap();
-            connection.execute(include_str!("setup.sql")).await.unwrap();
-            Self { connection }
+            Self {
+                pool,
+                idle_connection,
+            }
         })
     }
     pub fn find_level(&mut self, name: &str) -> usize {
         let result: Option<(i64,)> = block_on(
             sqlx::query_as("SELECT level from Persons WHERE name=?")
                 .bind(name)
-                .fetch_optional(&mut self.connection),
+                .fetch_optional(&self.pool),
         )
         .unwrap();
         if let Some((level,)) = result {
@@ -39,7 +50,7 @@ impl Db {
             if sqlx::query("UPDATE Persons SET level=? WHERE name=?")
                 .bind(level as i64)
                 .bind(name)
-                .execute(&mut self.connection)
+                .execute(&self.pool)
                 .await
                 .unwrap()
                 .rows_affected()
@@ -48,7 +59,7 @@ impl Db {
                 sqlx::query("INSERT INTO Persons VALUES (?, ?)")
                     .bind(name)
                     .bind(level as i64)
-                    .execute(&mut self.connection)
+                    .execute(&self.pool)
                     .await
                     .unwrap();
             }

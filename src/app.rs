@@ -8,7 +8,6 @@ pub struct Config {
     pub initial_health: usize,
     pub health_increase_per_level: usize,
     pub volume: f64,
-    pub database: String,
 }
 
 #[derive(geng::Assets)]
@@ -138,7 +137,7 @@ impl State {
             lobby_music,
             battle_music,
             battle_fade: 0.0,
-            db: Db::new(&assets.config.database),
+            db: Db::new(&secret::Config::read().unwrap().db.url),
             victory_fade: 0.0,
         }
     }

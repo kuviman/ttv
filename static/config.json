@@ -3,6 +3,5 @@
     "circle": "#0a0",
     "initial_health": 5,
     "health_increase_per_level": 5,
-    "volume": 0.5,
-    "database": "sqlite:data.db"
+    "volume": 0.5
 }
