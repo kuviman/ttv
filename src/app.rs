@@ -17,9 +17,9 @@ pub struct Assets {
     pub face: ugli::Texture,
     pub fireball: ugli::Texture,
     pub config: Config,
-    #[asset(path = "lobby.mp3")]
+    #[asset(path = "kuvimanPreBattle.wav")]
     pub lobby_music: geng::Sound,
-    #[asset(path = "battle.mp3")]
+    #[asset(path = "kuvimanBattle.wav")]
     pub battle_music: geng::Sound,
     #[asset(path = "spawn1.mp3")]
     pub spawn_effect: geng::Sound,
