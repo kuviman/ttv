@@ -55,7 +55,7 @@ pub struct Assets {
     pub death_sfx: geng::Sound,
     #[asset(path = "victory.mp3")]
     pub win_sfx: geng::Sound,
-    #[asset(path = "RaffleRoyaleTitle.wav")]
+    #[asset(path = "RaffleRoyaleTitleWithAnnouncement.wav")]
     pub title_sfx: geng::Sound,
 
     #[asset(range = "1..=1", path = "hats/*.png")]
