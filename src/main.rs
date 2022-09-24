@@ -11,7 +11,13 @@ use db::Db;
 use util::*;
 
 fn main() {
-    logger::init().unwrap();
+    {
+        let mut builder = logger::builder();
+        builder.parse_filters("geng=info");
+        builder.parse_filters("sqlx=off");
+        builder.parse_filters("reqwest=off");
+        logger::init_with(builder).unwrap();
+    }
 
     let geng = Geng::new("ttv");
     let geng = &geng;

@@ -34,12 +34,15 @@ pub fn get_ttv_access_token(login: impl AsRef<str>) -> eyre::Result<String> {
     let tokens: ttv::auth::Tokens = match std::fs::File::open(&tokens_file_path) {
         Ok(file) => {
             let tokens: ttv::auth::Tokens = serde_json::from_reader(file)?;
-            // TODO: ttv::auth::validate to maybe just use current token
-            block_on(ttv::auth::refresh(
-                &secret_config.ttv.client_id,
-                &secret_config.ttv.client_secret,
-                &tokens.refresh_token,
-            ))?
+            if block_on(ttv::auth::validate(&tokens.access_token))? {
+                tokens
+            } else {
+                block_on(ttv::auth::refresh(
+                    &secret_config.ttv.client_id,
+                    &secret_config.ttv.client_secret,
+                    &tokens.refresh_token,
+                ))?
+            }
         }
         Err(_) => block_on(ttv::auth::authenticate(
             &secret_config.ttv.client_id,

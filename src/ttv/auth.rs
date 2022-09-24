@@ -66,7 +66,7 @@ pub async fn authenticate(
     info!("Opening {}", authorize_url);
     open::that(authorize_url.as_str())?;
 
-    info!("Waiting for the user to be redirected to {}", redirect_uri);
+    debug!("Waiting for the user to be redirected to {}", redirect_uri);
     let redirected_url = wait_for_request_uri().await?;
     let query: HashMap<_, _> = redirected_url.query_pairs().collect();
 
@@ -81,7 +81,7 @@ pub async fn authenticate(
     }
     let code: &str = query.get("code").expect("No code wat");
 
-    info!("Got the code, getting the token");
+    debug!("Got the code, getting the token");
     let mut form = HashMap::new();
     form.insert("client_id", client_id);
     form.insert("client_secret", client_secret);
@@ -135,4 +135,17 @@ pub async fn refresh(
         .await?
         .json()
         .await?)
+}
+
+pub async fn validate(token: &str) -> eyre::Result<bool> {
+    let response = reqwest::Client::new()
+        .get("https://id.twitch.tv/oauth2/validate")
+        .header("Authorization", format!("OAuth {}", token))
+        .send()
+        .await?;
+    match response.status() {
+        reqwest::StatusCode::OK => Ok(true),
+        reqwest::StatusCode::UNAUTHORIZED => Ok(false),
+        _ => eyre::bail!("Unexpected status {}", response.status()),
+    }
 }

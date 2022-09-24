@@ -65,7 +65,7 @@ impl Client {
                 let join_handle = tokio::spawn(async move {
                     // This loop (and the thread) will only stop when TwitchIRCClient is dropped
                     while let Some(message) = incoming_messages.recv().await {
-                        info!("{}", serde_json::to_string(&message).unwrap());
+                        trace!("{}", serde_json::to_string(&message).unwrap());
                         if let Err(e) = messages_sender.send(Message::Irc(message)) {
                             error!("{:?}", e);
                         }
@@ -75,9 +75,9 @@ impl Client {
             }
         };
         let thread = std::thread::spawn(move || {
-            info!("Ttv client thread started");
+            debug!("Ttv client thread started");
             tokio_runtime.block_on(async_thread);
-            info!("Ttv client thread stopped");
+            debug!("Ttv client thread stopped");
         });
 
         std::thread::spawn(move || pubsub(messages_sender));
@@ -116,7 +116,6 @@ fn pubsub(sender: UnboundedSender<Message>) {
         .build()
         .unwrap();
     let user_id = tokio_runtime.block_on(async {
-        info!("Sending request");
         let json = reqwest::Client::new()
             .get("https://api.twitch.tv/helix/users")
             .query(&[("login", "kuviman")])
