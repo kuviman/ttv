@@ -50,7 +50,12 @@ impl Client {
 
         let config = ClientConfig::new_simple(StaticLoginCredentials::new(
             "kuvibot".to_owned(),
-            Some(secret::get_ttv_access_token("kuvibot").unwrap()),
+            Some(
+                Secrets::read()
+                    .unwrap()
+                    .ttv_access_token("kuvibot")
+                    .unwrap(),
+            ),
         ));
         let (mut incoming_messages, client) = tokio_runtime.block_on(async {
             TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(config)
@@ -109,8 +114,8 @@ impl Client {
 }
 
 fn pubsub(sender: UnboundedSender<Message>) {
-    let secrets = secret::Config::read().unwrap();
-    let access_token = secret::get_ttv_access_token("kuviman").unwrap();
+    let secrets = Secrets::read().unwrap();
+    let access_token = secrets.ttv_access_token("kuviman").unwrap();
     let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -120,7 +125,7 @@ fn pubsub(sender: UnboundedSender<Message>) {
             .get("https://api.twitch.tv/helix/users")
             .query(&[("login", "kuviman")])
             .header("Authorization", format!("Bearer {}", access_token))
-            .header("Client-ID", secrets.ttv.client_id)
+            .header("Client-ID", &secrets.config.ttv.client_id)
             .send()
             .await
             .unwrap()

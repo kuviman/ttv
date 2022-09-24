@@ -106,12 +106,12 @@ pub async fn authenticate(
 #[ignore]
 fn test_authenticate() {
     logger::init_for_tests();
-    let secrets = secret::Config::read().unwrap();
+    let secrets = secret::Secrets::read().unwrap();
     info!(
         "{:?}",
         block_on(authenticate(
-            &secrets.ttv.client_id,
-            &secrets.ttv.client_secret,
+            &secrets.config.ttv.client_id,
+            &secrets.config.ttv.client_secret,
             true,
             &[Scope::new("channel:read:redemptions")],
         )),

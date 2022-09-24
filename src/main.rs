@@ -8,6 +8,7 @@ mod ttv;
 mod util;
 
 use db::Db;
+use secret::Secrets;
 use util::*;
 
 fn main() {
