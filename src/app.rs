@@ -466,6 +466,32 @@ impl geng::State for State {
                 .scale_uniform(0.5)
                 .translate(vec2(0.0, 2.5)),
             );
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    "code - kuviman",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .scale_uniform(0.2)
+                .translate(vec2(0.0, -6.5)),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
+                    "musix&sfx - BrainoidGames",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .scale_uniform(0.2)
+                .translate(vec2(0.0, -7.0)),
+            );
         } else if self.guys.len() == 1 {
             let winner = self.guys.iter().next().unwrap();
             if !self.winning_screen {
