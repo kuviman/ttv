@@ -291,8 +291,8 @@ impl State {
         self.next_attack = Some(1.0);
     }
 
-    fn spawn_guy(&mut self, name: String) {
-        let level = self.db.find_level(&name);
+    fn spawn_guy(&mut self, name: String, random: bool) {
+        let level = self.db.find_level(&name, !random);
         let health = self.assets.config.initial_health
             + level * self.assets.config.health_increase_per_level;
         let id = self.next_id;
@@ -599,6 +599,7 @@ impl geng::State for State {
                             .map(|c| c as char)
                             .take(global_rng().gen_range(5..=15))
                             .collect(),
+                        true,
                     );
                 }
                 geng::Key::Space => {
@@ -672,7 +673,7 @@ impl geng::State for State {
                                 if self.guys.iter().any(|guy| guy.name == name) {
                                     self.ttv_client.reply("No cheating allowed 🚫", &message);
                                 } else {
-                                    self.spawn_guy(name.to_owned());
+                                    self.spawn_guy(name.to_owned(), false);
                                 }
                             } else {
                                 self.ttv_client.reply(
@@ -682,7 +683,7 @@ impl geng::State for State {
                             }
                         }
                         "!lvl" | "!level" => {
-                            let level = self.db.find_level(&name);
+                            let level = self.db.find_level(&name, true);
                             let hp = self.assets.config.initial_health
                                 + level * self.assets.config.health_increase_per_level;
                             self.ttv_client.reply(
@@ -699,7 +700,7 @@ impl geng::State for State {
                             guy.health += self.assets.config.health_increase_per_level;
                             guy.max_health += self.assets.config.health_increase_per_level;
                         }
-                        let level = self.db.find_level(&name) + 1;
+                        let level = self.db.find_level(&name, false) + 1;
                         self.db.set_level(&name, level);
                         let hp = self.assets.config.initial_health
                             + level * self.assets.config.health_increase_per_level;
