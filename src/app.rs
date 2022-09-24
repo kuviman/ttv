@@ -459,6 +459,19 @@ impl geng::State for State {
                 &font::Text::unit(
                     &self.geng,
                     &**self.geng.default_font(),
+                    "WIP",
+                    Rgba::WHITE,
+                    Rgba::BLACK,
+                )
+                .scale_uniform(0.5)
+                .translate(vec2(12.0, 6.0)),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &ui_camera,
+                &font::Text::unit(
+                    &self.geng,
+                    &**self.geng.default_font(),
                     "type !fight to join",
                     Rgba::WHITE,
                     Rgba::BLACK,
