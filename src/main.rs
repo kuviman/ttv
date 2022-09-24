@@ -13,7 +13,6 @@ use util::*;
 fn main() {
     logger::init().unwrap();
 
-    ttv::refresh_token();
     let geng = Geng::new("ttv");
     let geng = &geng;
     geng::run(

@@ -1,14 +1,27 @@
 use super::*;
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Scope(String);
+
+impl Scope {
+    pub fn new(scope: impl AsRef<str>) -> Self {
+        Self(scope.as_ref().to_owned())
+    }
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Tokens {
-    access_token: String,
-    refresh_token: String,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub scope: Vec<Scope>,
 }
 
 /// Authenticate using authorization code grant flow
 /// <https://dev.twitch.tv/docs/authentication/getting-tokens-oauth#authorization-code-grant-flow>
-async fn authenticate(
+pub async fn authenticate(
     client_id: &str,
     client_secret: &str,
     force_verify: bool,
@@ -43,8 +56,8 @@ async fn authenticate(
             "scope",
             &scopes
                 .iter()
-                .map(|scope| scope.to_string())
-                .collect::<Vec<String>>()
+                .map(|scope| scope.as_str())
+                .collect::<Vec<&str>>()
                 .join(" "),
         );
         query.append_pair("state", &state);
@@ -75,16 +88,13 @@ async fn authenticate(
     form.insert("code", code);
     form.insert("grant_type", "authorization_code");
     form.insert("redirect_uri", redirect_uri);
-    let json = reqwest::Client::new()
+    Ok(reqwest::Client::new()
         .post("https://id.twitch.tv/oauth2/token")
         .form(&form)
         .send()
         .await?
-        .text()
-        .await?;
-    debug!("{}", json);
-    let tokens = serde_json::from_str(&json)?;
-    Ok(tokens)
+        .json()
+        .await?)
 }
 
 // This test requires interacting with the browser, so run it directly:
@@ -94,7 +104,7 @@ async fn authenticate(
 // ```
 #[test]
 #[ignore]
-pub fn test_authenticate() {
+fn test_authenticate() {
     logger::init_for_tests();
     let secrets = secret::Config::read().unwrap();
     info!(
@@ -103,7 +113,26 @@ pub fn test_authenticate() {
             &secrets.ttv.client_id,
             &secrets.ttv.client_secret,
             true,
-            &[Scope::ChannelReadRedemptions],
+            &[Scope::new("channel:read:redemptions")],
         )),
     );
+}
+
+pub async fn refresh(
+    client_id: &str,
+    client_secret: &str,
+    refresh_token: &str,
+) -> eyre::Result<Tokens> {
+    let mut form = HashMap::new();
+    form.insert("client_id", client_id);
+    form.insert("client_secret", client_secret);
+    form.insert("grant_type", "refresh_token");
+    form.insert("refresh_token", refresh_token);
+    Ok(reqwest::Client::new()
+        .post("https://id.twitch.tv/oauth2/token")
+        .form(&form)
+        .send()
+        .await?
+        .json()
+        .await?)
 }
