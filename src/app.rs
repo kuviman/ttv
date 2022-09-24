@@ -39,6 +39,16 @@ impl geng::LoadAsset for Texture {
 }
 
 #[derive(geng::Assets)]
+pub struct GuyAssets {
+    #[asset(range = "1..=1", path = "hat/*.png")]
+    pub hat: Vec<Texture>,
+    #[asset(range = "1..=1", path = "pants/*.png")]
+    pub pants: Vec<Texture>,
+    #[asset(range = "1..=2", path = "face/*.png")]
+    pub face: Vec<Texture>,
+}
+
+#[derive(geng::Assets)]
 pub struct Assets {
     pub fireball: Texture,
     pub background: ugli::Texture,
@@ -55,17 +65,9 @@ pub struct Assets {
     pub death_sfx: geng::Sound,
     #[asset(path = "victory.mp3")]
     pub win_sfx: geng::Sound,
-    #[asset(path = "RaffleRoyaleTitleWithAnnouncement.wav")]
+    #[asset(path = "RaffleRoyaleTitle.wav")]
     pub title_sfx: geng::Sound,
-
-    #[asset(range = "1..=1", path = "hats/*.png")]
-    pub hats: Vec<Texture>,
-    #[asset(range = "1..=1", path = "pants/*.png")]
-    pub pants: Vec<Texture>,
-    #[asset(range = "1..=2", path = "faces/*.png")]
-    pub faces: Vec<Texture>,
-    #[asset(range = "1..=1", path = "faces/secret_*.png")]
-    pub secret_faces: Vec<Texture>,
+    pub guy: GuyAssets,
 }
 
 impl Assets {
@@ -383,9 +385,9 @@ impl State {
             health,
             max_health: health,
             spawn: 0.0,
-            face: global_rng().gen_range(0..self.assets.faces.len()),
-            pants: global_rng().gen_range(0..self.assets.pants.len()),
-            hat: global_rng().gen_range(0..self.assets.hats.len()),
+            face: global_rng().gen_range(0..self.assets.guy.face.len()),
+            pants: global_rng().gen_range(0..self.assets.guy.pants.len()),
+            hat: global_rng().gen_range(0..self.assets.guy.hat.len()),
             outfit_color: Hsva::new(global_rng().gen_range(0.0..1.0), 1.0, 1.0, 1.0).into(),
         });
 
@@ -489,7 +491,7 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::new(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.faces[guy.face],
+                    &self.assets.guy.face[guy.face],
                 ),
             );
             self.geng.draw_2d(
@@ -497,7 +499,7 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::colored(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.pants[guy.pants],
+                    &self.assets.guy.pants[guy.pants],
                     guy.outfit_color,
                 ),
             );
@@ -506,7 +508,7 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::colored(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.hats[guy.hat],
+                    &self.assets.guy.hat[guy.hat],
                     guy.outfit_color,
                 ),
             );
