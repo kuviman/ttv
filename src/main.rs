@@ -11,6 +11,12 @@ use db::Db;
 use secret::Secrets;
 use util::*;
 
+#[derive(clap::Parser)]
+pub struct Opt {
+    #[clap(long)]
+    pub no_chat_spam: bool,
+}
+
 fn main() {
     {
         let mut builder = logger::builder();
@@ -19,6 +25,8 @@ fn main() {
         builder.parse_filters("reqwest=off");
         logger::init_with(builder).unwrap();
     }
+
+    let opt: Opt = program_args::parse();
 
     let geng = Geng::new("ttv");
     let geng = &geng;
@@ -33,7 +41,7 @@ fn main() {
                 move |assets| {
                     let mut assets = assets.unwrap();
                     assets.process();
-                    app::State::new(&geng, &Rc::new(assets), ttv::Client::new())
+                    app::State::new(&geng, &Rc::new(assets), ttv::Client::new(), opt)
                 }
             },
         ),

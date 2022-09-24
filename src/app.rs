@@ -40,9 +40,10 @@ impl geng::LoadAsset for Texture {
 
 #[derive(geng::Assets)]
 pub struct Assets {
-    pub hat: Texture,
-    pub face: Texture,
     pub fireball: Texture,
+    pub background: ugli::Texture,
+    #[asset(range = "1..=1", path = "background_entities/*.png")]
+    pub background_entities: Vec<Texture>,
     pub config: Config,
     #[asset(path = "kuvimanPreBattle.wav")]
     pub lobby_music: geng::Sound,
@@ -56,12 +57,23 @@ pub struct Assets {
     pub win_sfx: geng::Sound,
     #[asset(path = "RaffleRoyaleTitle.wav")]
     pub title_sfx: geng::Sound,
+
+    #[asset(range = "1..=1", path = "hats/*.png")]
+    pub hats: Vec<Texture>,
+    #[asset(range = "1..=1", path = "pants/*.png")]
+    pub pants: Vec<Texture>,
+    #[asset(range = "1..=2", path = "faces/*.png")]
+    pub faces: Vec<Texture>,
+    #[asset(range = "1..=1", path = "faces/secret_*.png")]
+    pub secret_faces: Vec<Texture>,
 }
 
 impl Assets {
     pub fn process(&mut self) {
         self.lobby_music.looped = true;
         self.battle_music.looped = true;
+        self.background.set_filter(ugli::Filter::Nearest);
+        self.background.set_wrap_mode(ugli::WrapMode::Repeat);
     }
 }
 
@@ -76,6 +88,10 @@ struct Guy {
     velocity: Vec2<f32>,
     position: Vec2<f32>,
     spawn: f32,
+    hat: usize,
+    pants: usize,
+    face: usize,
+    outfit_color: Rgba<f32>,
 }
 
 #[derive(Debug)]
@@ -94,7 +110,14 @@ struct DelayedMessage {
     message: String,
 }
 
+struct BackgroundEntity {
+    texture_index: usize,
+    position: Vec2<f32>,
+    color: Rgba<f32>,
+}
+
 pub struct State {
+    opt: Opt,
     geng: Geng,
     assets: Rc<Assets>,
     guys: Collection<Guy>,
@@ -118,11 +141,14 @@ pub struct State {
     idle: bool,
     idle_fade: f32,
     db: Db,
+    background_entities: Vec<BackgroundEntity>,
 }
 
 impl Drop for State {
     fn drop(&mut self) {
-        self.ttv_client.say("Going to sleep 💤");
+        if !self.opt.no_chat_spam {
+            self.ttv_client.say("Going to sleep 💤");
+        }
     }
 }
 
@@ -131,8 +157,10 @@ impl State {
     const MIN_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
     const GUY_ACCELERATION: f32 = 10.0;
-    pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: ttv::Client) -> Self {
-        ttv_client.say("Hai, im online 🤖");
+    pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: ttv::Client, opt: Opt) -> Self {
+        if !opt.no_chat_spam {
+            ttv_client.say("Hai, im online 🤖");
+        }
         let mut lobby_music = assets.lobby_music.effect();
         lobby_music.set_volume(0.0);
         lobby_music.play();
@@ -141,6 +169,7 @@ impl State {
         battle_music.play();
 
         Self {
+            opt,
             idle: true,
             idle_fade: 0.0,
             next_id: 0,
@@ -171,6 +200,16 @@ impl State {
             battle_fade: 0.0,
             db: Db::new(&Secrets::read().unwrap().config.db.url),
             victory_fade: 0.0,
+            background_entities: std::iter::from_fn(|| {
+                let d = 50.0;
+                Some(BackgroundEntity {
+                    texture_index: global_rng().gen_range(0..assets.background_entities.len()),
+                    position: vec2(global_rng().gen_range(-d..d), global_rng().gen_range(-d..d)),
+                    color: Hsva::new(global_rng().gen_range(0.0..1.0), 0.5, 0.8, 1.0).into(),
+                })
+            })
+            .take(500)
+            .collect(),
         }
     }
 
@@ -344,6 +383,10 @@ impl State {
             health,
             max_health: health,
             spawn: 0.0,
+            face: global_rng().gen_range(0..self.assets.faces.len()),
+            pants: global_rng().gen_range(0..self.assets.pants.len()),
+            hat: global_rng().gen_range(0..self.assets.hats.len()),
+            outfit_color: Hsva::new(global_rng().gen_range(0.0..1.0), 1.0, 1.0, 1.0).into(),
         });
 
         let mut sound_effect = self
@@ -361,8 +404,10 @@ impl State {
             self.ttv_client.say("Raffle Royale is already going on");
             return;
         }
-        self.ttv_client
-            .say("Raffle Royale is about to begin! Type !fight to join!");
+        if !self.opt.no_chat_spam {
+            self.ttv_client
+                .say("Raffle Royale is about to begin! Type !fight to join!");
+        }
         self.idle = false;
         self.guys.clear();
         let mut sfx = self.assets.title_sfx.effect();
@@ -376,19 +421,50 @@ impl geng::State for State {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(self.assets.config.background), None, None);
 
+        {
+            let vertex = |x, y| {
+                let x = x * 2 - 1;
+                let y = y * 2 - 1;
+                let p = self.camera.center + vec2(x as f32, y as f32) * self.camera.fov * 2.0;
+                draw_2d::TexturedVertex {
+                    a_pos: p,
+                    a_color: Rgba::WHITE,
+                    a_vt: p,
+                }
+            };
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::TexturedPolygon::new(
+                    vec![vertex(0, 0), vertex(0, 1), vertex(1, 1), vertex(1, 0)],
+                    &self.assets.background,
+                ),
+            );
+            for entity in &self.background_entities {
+                let texture = &self.assets.background_entities[entity.texture_index];
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &draw_2d::TexturedQuad::unit_colored(texture, entity.color)
+                        .scale(texture.size().map(|x| x as f32) / 128.0)
+                        .translate(entity.position),
+                );
+            }
+        }
+
         if self.idle {
             return;
         }
 
-        self.geng.draw_2d(
-            framebuffer,
-            &self.camera,
-            &draw_2d::Ellipse::circle(
-                self.circle.center,
-                self.circle.radius,
-                self.assets.config.circle,
-            ),
-        );
+        // self.geng.draw_2d(
+        //     framebuffer,
+        //     &self.camera,
+        //     &draw_2d::Ellipse::circle(
+        //         self.circle.center,
+        //         self.circle.radius,
+        //         self.assets.config.circle,
+        //     ),
+        // );
 
         let t = 1.0 - self.next_attack.unwrap_or(0.0);
         for attack in &self.attacks {
@@ -413,15 +489,25 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::new(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.face,
+                    &self.assets.faces[guy.face],
                 ),
             );
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &geng::draw_2d::TexturedQuad::new(
+                &geng::draw_2d::TexturedQuad::colored(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.hat,
+                    &self.assets.pants[guy.pants],
+                    guy.outfit_color,
+                ),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &geng::draw_2d::TexturedQuad::colored(
+                    AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                    &self.assets.hats[guy.hat],
+                    guy.outfit_color,
                 ),
             );
             let hp_text_aabb =
@@ -558,10 +644,12 @@ impl geng::State for State {
         } else if self.guys.len() == 1 {
             let winner = self.guys.iter().next().unwrap();
             if !self.winning_screen {
-                self.delayed_messages.push(DelayedMessage {
-                    time: self.time + 5.0,
-                    message: format!("Winner is {} 🎉", winner.name),
-                });
+                if !self.opt.no_chat_spam {
+                    self.delayed_messages.push(DelayedMessage {
+                        time: self.time + 5.0,
+                        message: format!("Winner is {} 🎉", winner.name),
+                    });
+                }
                 self.winning_screen = true;
                 let mut sound_effect = self.assets.win_sfx.effect();
                 sound_effect.set_volume(self.assets.config.volume);
