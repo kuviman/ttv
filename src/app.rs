@@ -10,11 +10,39 @@ pub struct Config {
     pub volume: f64,
 }
 
+#[derive(Deref)]
+pub struct Texture(#[deref] ugli::Texture);
+
+impl std::borrow::Borrow<ugli::Texture> for Texture {
+    fn borrow(&self) -> &ugli::Texture {
+        &self.0
+    }
+}
+impl std::borrow::Borrow<ugli::Texture> for &'_ Texture {
+    fn borrow(&self) -> &ugli::Texture {
+        &self.0
+    }
+}
+
+impl geng::LoadAsset for Texture {
+    fn load(geng: &Geng, path: &std::path::Path) -> geng::AssetFuture<Self> {
+        let texture = <ugli::Texture as geng::LoadAsset>::load(geng, path);
+        async move {
+            let mut texture = texture.await?;
+            texture.set_filter(ugli::Filter::Nearest);
+            Ok(Texture(texture))
+        }
+        .boxed_local()
+    }
+
+    const DEFAULT_EXT: Option<&'static str> = Some("png");
+}
+
 #[derive(geng::Assets)]
 pub struct Assets {
-    pub hat: ugli::Texture,
-    pub face: ugli::Texture,
-    pub fireball: ugli::Texture,
+    pub hat: Texture,
+    pub face: Texture,
+    pub fireball: Texture,
     pub config: Config,
     #[asset(path = "kuvimanPreBattle.wav")]
     pub lobby_music: geng::Sound,
@@ -87,6 +115,8 @@ pub struct State {
     battle_music: geng::SoundEffect,
     battle_fade: f32,
     victory_fade: f32,
+    idle: bool,
+    idle_fade: f32,
     db: Db,
 }
 
@@ -111,6 +141,8 @@ impl State {
         battle_music.play();
 
         Self {
+            idle: true,
+            idle_fade: 0.0,
             next_id: 0,
             geng: geng.clone(),
             assets: assets.clone(),
@@ -223,7 +255,7 @@ impl State {
                         self.feed = Some(format!("{} has been eliminated", guy.name));
 
                         let mut sound_effect = self.assets.death_sfx.effect();
-                        sound_effect.set_volume(self.assets.config.volume);
+                        sound_effect.set_volume(self.assets.config.volume * 0.5);
                         sound_effect.play();
                     }
                 }
@@ -323,12 +355,30 @@ impl State {
         sound_effect.set_volume(self.assets.config.volume);
         sound_effect.play();
     }
+
+    fn start_raffle(&mut self) {
+        if !self.idle {
+            self.ttv_client.say("Raffle Royale is already going on");
+            return;
+        }
+        self.ttv_client
+            .say("Raffle Royale is about to begin! Type !fight to join!");
+        self.idle = false;
+        self.guys.clear();
+        let mut sfx = self.assets.title_sfx.effect();
+        sfx.set_volume(self.assets.config.volume * 3.0);
+        sfx.play();
+    }
 }
 
 impl geng::State for State {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(self.assets.config.background), None, None);
+
+        if self.idle {
+            return;
+        }
 
         self.geng.draw_2d(
             framebuffer,
@@ -603,7 +653,14 @@ impl geng::State for State {
                     );
                 }
                 geng::Key::Space => {
-                    self.process_battle = !self.process_battle;
+                    if self.idle {
+                        self.start_raffle();
+                    } else if !self.process_battle {
+                        self.process_battle = true;
+                    } else {
+                        self.process_battle = false;
+                        self.idle = true;
+                    }
                 }
                 _ => {}
             },
@@ -613,12 +670,22 @@ impl geng::State for State {
     fn update(&mut self, delta_time: f64) {
         let delta_time = delta_time as f32;
 
+        let was_idle = self.idle_fade != 1.0;
         // TODO: window.is_minimized?
-        let volume = if self.geng.window().real_size() == vec2(0, 0) {
+        let volume = if self.idle {
+            self.idle_fade = 0.0;
             0.0
         } else {
-            self.assets.config.volume
+            self.idle_fade = (self.idle_fade + delta_time / 2.5).min(1.0);
+            self.assets.config.volume * if self.idle_fade == 1.0 { 1.0 } else { 0.0 }
         };
+        let start_music = was_idle && self.idle_fade == 1.0;
+        if start_music {
+            self.lobby_music.pause();
+            self.battle_music.pause();
+            self.lobby_music = self.assets.lobby_music.effect();
+            self.battle_music = self.assets.battle_music.effect();
+        }
         if self.process_battle {
             self.battle_fade += delta_time;
             if self.guys.len() == 1 {
@@ -633,6 +700,11 @@ impl geng::State for State {
             .set_volume(self.battle_fade as f64 * volume * (1.0 - self.victory_fade as f64));
         self.lobby_music
             .set_volume((1.0 - self.battle_fade as f64) * volume);
+
+        if start_music {
+            self.lobby_music.play();
+            self.battle_music.play();
+        }
 
         self.time += delta_time;
         for message in &self.delayed_messages {
@@ -669,7 +741,10 @@ impl geng::State for State {
                     let name = message.sender.name.as_str();
                     match message.message_text.trim() {
                         "!fight" | "!join" => {
-                            if !self.process_battle {
+                            if self.idle {
+                                self.ttv_client
+                                    .reply("There is no raffle going on right now", &message);
+                            } else if !self.process_battle {
                                 if self.guys.iter().any(|guy| guy.name == name) {
                                     self.ttv_client.reply("No cheating allowed 🚫", &message);
                                 } else {
@@ -690,6 +765,9 @@ impl geng::State for State {
                                 &format!("You are level {} ({} hp) ⭐", level, hp),
                                 &message,
                             );
+                        }
+                        "!raffle royale" if name == "kuviman" => {
+                            self.start_raffle();
                         }
                         _ => {}
                     }
