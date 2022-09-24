@@ -149,77 +149,101 @@ fn pubsub(sender: UnboundedSender<Message>) {
             .to_owned()
     });
 
-    let mut ws = websocket_lite::ClientBuilder::new("wss://pubsub-edge.twitch.tv")
-        .unwrap()
-        .connect()
+    block_on(async move {
+        let mut ws = websocket_lite::ClientBuilder::new("wss://pubsub-edge.twitch.tv")
+            .unwrap()
+            .async_connect()
+            .await
+            .unwrap();
+        let request = serde_json::json!({
+            "type": "LISTEN",
+            "nonce": "kekw",
+            "data": {
+                "topics": [format!("channel-points-channel-v1.{}", user_id)],
+                "auth_token": access_token,
+            }
+        });
+        ws.send(websocket_lite::Message::text(
+            serde_json::to_string(&request).unwrap(),
+        ))
+        .await
         .unwrap();
-    let request = serde_json::json!({
-        "type": "LISTEN",
-        "nonce": "kekw",
-        "data": {
-            "topics": [format!("channel-points-channel-v1.{}", user_id)],
-            "auth_token": access_token,
-        }
-    });
-    ws.send(websocket_lite::Message::text(
-        serde_json::to_string(&request).unwrap(),
-    ))
-    .unwrap();
-    while let Ok(Some(message)) = ws.receive() {
-        let message = serde_json::from_str::<serde_json::Value>(message.as_text().unwrap())
-            .unwrap()
-            .as_object()
-            .unwrap()
-            .clone();
-        if message.get("type").unwrap() == "MESSAGE" {
-            let message = message
-                .get("data")
-                .unwrap()
-                .as_object()
-                .unwrap()
-                .get("message")
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_owned();
-            let message = serde_json::from_str::<serde_json::Value>(&message)
+        let mut timer = Timer::new();
+        loop {
+            if timer.elapsed() > 60.0 {
+                debug!("Sending ping to pubsub");
+                ws.send(websocket_lite::Message::text(r#"{"type": "PING"}"#))
+                    .await
+                    .unwrap();
+                timer.tick();
+            }
+            let message = {
+                let message =
+                    tokio::time::timeout(std::time::Duration::from_secs(10), ws.next()).await;
+                match message {
+                    Ok(message) => message,
+                    Err(_) => {
+                        continue;
+                    }
+                }
+            };
+            let message = message.unwrap().unwrap();
+            debug!("{:?}", message);
+            let message = serde_json::from_str::<serde_json::Value>(message.as_text().unwrap())
                 .unwrap()
                 .as_object()
                 .unwrap()
                 .clone();
-            let data = message
-                .get("data")
-                .unwrap()
-                .as_object()
-                .unwrap()
-                .get("redemption")
-                .unwrap()
-                .as_object()
-                .unwrap();
-            let name = data
-                .get("user")
-                .unwrap()
-                .as_object()
-                .unwrap()
-                .get("display_name")
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_owned();
-            let reward = data
-                .get("reward")
-                .unwrap()
-                .as_object()
-                .unwrap()
-                .get("title")
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_owned();
-            info!("{} redeemed {}", name, reward);
-            sender
-                .send(Message::RewardRedemption { name, reward })
-                .unwrap();
+            if message.get("type").unwrap() == "MESSAGE" {
+                let message = message
+                    .get("data")
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .get("message")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_owned();
+                let message = serde_json::from_str::<serde_json::Value>(&message)
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .clone();
+                let data = message
+                    .get("data")
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .get("redemption")
+                    .unwrap()
+                    .as_object()
+                    .unwrap();
+                let name = data
+                    .get("user")
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .get("display_name")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_owned();
+                let reward = data
+                    .get("reward")
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .get("title")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_owned();
+                info!("{} redeemed {}", name, reward);
+                sender
+                    .send(Message::RewardRedemption { name, reward })
+                    .unwrap();
+            }
         }
-    }
+    });
 }
