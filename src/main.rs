@@ -20,7 +20,7 @@ fn main() {
         geng::LoadingScreen::new(
             geng,
             geng::EmptyLoadingScreen,
-            <app::Assets as geng::LoadAsset>::load(geng, &static_path()),
+            <app::Assets as geng::LoadAsset>::load(geng, &static_path().join("assets")),
             {
                 let geng = geng.clone();
                 move |assets| {
