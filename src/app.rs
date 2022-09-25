@@ -8,6 +8,8 @@ pub struct Config {
     pub initial_health: usize,
     pub health_increase_per_level: usize,
     pub volume: f64,
+    pub guy_palette: Vec<Rgba<f32>>,
+    pub background_palette: Vec<Rgba<f32>>,
 }
 
 #[derive(Deref)]
@@ -118,6 +120,11 @@ struct BackgroundEntity {
     color: Rgba<f32>,
 }
 
+enum RaffleMode {
+    Regular,
+    Ld,
+}
+
 pub struct State {
     opt: Opt,
     geng: Geng,
@@ -144,6 +151,7 @@ pub struct State {
     idle_fade: f32,
     db: Db,
     background_entities: Vec<BackgroundEntity>,
+    raffle_mode: RaffleMode,
 }
 
 impl Drop for State {
@@ -207,11 +215,16 @@ impl State {
                 Some(BackgroundEntity {
                     texture_index: global_rng().gen_range(0..assets.background_entities.len()),
                     position: vec2(global_rng().gen_range(-d..d), global_rng().gen_range(-d..d)),
-                    color: Hsva::new(global_rng().gen_range(0.0..1.0), 0.5, 0.8, 1.0).into(),
+                    color: *assets
+                        .config
+                        .background_palette
+                        .choose(&mut global_rng())
+                        .unwrap(),
                 })
             })
             .take(500)
             .collect(),
+            raffle_mode: RaffleMode::Regular,
         }
     }
 
@@ -373,14 +386,32 @@ impl State {
         self.guys.insert(Guy {
             id,
             name,
-            position: self.camera.center
-                + vec2(
-                    self.camera.fov / 2.0
-                        * (self.framebuffer_size.x as f32 / self.framebuffer_size.y as f32)
-                            .max(1.0),
-                    0.0,
+            position: std::iter::from_fn(|| {
+                Some(
+                    self.camera.center
+                        + vec2(
+                            global_rng().gen_range(
+                                0.0..self.camera.fov / 2.0
+                                    * (self.framebuffer_size.x as f32
+                                        / self.framebuffer_size.y as f32)
+                                        .max(1.0),
+                            ),
+                            0.0,
+                        )
+                        .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
                 )
-                .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
+            })
+            .take(50)
+            .filter(|&pos| {
+                for guy in &self.guys {
+                    if (guy.position - pos).len() < State::MIN_DISTANCE {
+                        return false;
+                    }
+                }
+                true
+            })
+            .min_by_key(|&pos| r32((pos - self.circle.center).len()))
+            .unwrap_or(self.camera.center),
             velocity: Vec2::ZERO,
             health,
             max_health: health,
@@ -388,7 +419,12 @@ impl State {
             face: global_rng().gen_range(0..self.assets.guy.face.len()),
             pants: global_rng().gen_range(0..self.assets.guy.pants.len()),
             hat: global_rng().gen_range(0..self.assets.guy.hat.len()),
-            outfit_color: Hsva::new(global_rng().gen_range(0.0..1.0), 1.0, 1.0, 1.0).into(),
+            outfit_color: *self
+                .assets
+                .config
+                .guy_palette
+                .choose(&mut global_rng())
+                .unwrap(),
         });
 
         let mut sound_effect = self
@@ -401,7 +437,7 @@ impl State {
         sound_effect.play();
     }
 
-    fn start_raffle(&mut self) {
+    fn start_raffle(&mut self, mode: RaffleMode) {
         if !self.idle {
             self.ttv_client.say("Raffle Royale is already going on");
             return;
@@ -415,6 +451,7 @@ impl State {
         let mut sfx = self.assets.title_sfx.effect();
         sfx.set_volume(self.assets.config.volume * 3.0);
         sfx.play();
+        self.raffle_mode = mode;
     }
 }
 
@@ -744,7 +781,7 @@ impl geng::State for State {
                 }
                 geng::Key::Space => {
                     if self.idle {
-                        self.start_raffle();
+                        self.start_raffle(RaffleMode::Regular);
                     } else if !self.process_battle {
                         self.process_battle = true;
                     } else {
@@ -860,7 +897,10 @@ impl geng::State for State {
                             );
                         }
                         "!raffle royale" if name == "kuviman" => {
-                            self.start_raffle();
+                            self.start_raffle(RaffleMode::Regular);
+                        }
+                        "!raffle royale ld" if name == "kuviman" => {
+                            self.start_raffle(RaffleMode::Ld);
                         }
                         _ => {}
                     }

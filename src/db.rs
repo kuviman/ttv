@@ -58,9 +58,29 @@ impl Db {
                 .rows_affected()
                 == 0
             {
-                sqlx::query("INSERT INTO `Guy` VALUES (?, ?)")
+                sqlx::query("INSERT INTO `Guy` (`name`, `level`) VALUES (?, ?)")
                     .bind(name)
                     .bind(level as i64)
+                    .execute(&self.pool)
+                    .await
+                    .unwrap();
+            }
+        });
+    }
+    pub fn set_game_link(&mut self, name: &str, link: Option<&str>) {
+        block_on(async {
+            if sqlx::query("UPDATE `Guy` SET `game_link`=? WHERE `name`=?")
+                .bind(link)
+                .bind(name)
+                .execute(&self.pool)
+                .await
+                .unwrap()
+                .rows_affected()
+                == 0
+            {
+                sqlx::query("INSERT INTO `Guy` (`name`, `game_link`) VALUES (?, ?)")
+                    .bind(name)
+                    .bind(link)
                     .execute(&self.pool)
                     .await
                     .unwrap();
@@ -76,4 +96,8 @@ fn test_db() {
     assert!(db.find_level("kuviman", true) == 0);
     db.set_level("kuviman", 5);
     assert!(db.find_level("kuviman", true) == 5);
+    db.set_game_link("kuviman", Some("123"));
+    db.set_game_link("kuviman", None);
+    db.set_game_link("random_dude", Some("123"));
+    db.set_game_link("random_dude2", None);
 }

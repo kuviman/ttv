@@ -3,5 +3,23 @@
     "circle": "#0a0",
     "initial_health": 5,
     "health_increase_per_level": 5,
-    "volume": 0.5
+    "volume": 0.5,
+    "guy_palette": [
+        "#B04545",
+        "#B07245",
+        "#BFA310",
+        "#4583B0",
+        "#4555B0",
+        "#9145B0",
+        "#B045A1"
+    ],
+    "background_palette": [
+        "#8D7239",
+        "#8D8739",
+        "#949E20",
+        "#5B8F6B",
+        "#5B7A6B",
+        "#7E726B",
+        "#8D7264"
+    ]
 }
