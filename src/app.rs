@@ -752,6 +752,9 @@ impl geng::State for State {
                         self.idle = true;
                     }
                 }
+                geng::Key::F11 => {
+                    self.geng.window().toggle_fullscreen();
+                }
                 _ => {}
             },
             _ => {}
