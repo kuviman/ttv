@@ -69,6 +69,11 @@ pub struct Assets {
     pub win_sfx: geng::Sound,
     #[asset(path = "RaffleRoyaleTitle.wav")]
     pub title_sfx: geng::Sound,
+    #[asset(path = "levelup.wav")]
+    pub levelup_sfx: geng::Sound,
+    pub levelup: Rc<Texture>,
+    pub levelup_front: Rc<Texture>,
+    pub skull: Rc<Texture>,
     pub guy: GuyAssets,
 }
 
@@ -153,6 +158,19 @@ pub struct State {
     db: Db,
     background_entities: Vec<BackgroundEntity>,
     raffle_mode: RaffleMode,
+    effects: Vec<Effect>,
+}
+
+struct Effect {
+    pos: Vec2<f32>,
+    offset: f32,
+    size: f32,
+    time: f32,
+    max_time: f32,
+    back_texture: Option<Rc<Texture>>,
+    front_texture: Option<Rc<Texture>>,
+    guy_id: Option<Id>,
+    color: Rgba<f32>,
 }
 
 impl Drop for State {
@@ -226,6 +244,7 @@ impl State {
             .take(500)
             .collect(),
             raffle_mode: RaffleMode::Regular,
+            effects: vec![],
         }
     }
 
@@ -311,6 +330,18 @@ impl State {
                 for guy in &self.guys {
                     if guy.health == 0 {
                         self.feed = Some(format!("{} has been eliminated", guy.name));
+
+                        self.effects.push(Effect {
+                            pos: guy.position,
+                            offset: 0.0,
+                            size: 1.0,
+                            time: 0.0,
+                            max_time: 0.7,
+                            back_texture: None,
+                            front_texture: Some(self.assets.skull.clone()),
+                            guy_id: Some(guy.id),
+                            color: Rgba::BLACK,
+                        });
 
                         let mut sound_effect = self.assets.death_sfx.effect();
                         sound_effect.set_volume(self.assets.config.volume * 0.5);
@@ -526,6 +557,25 @@ impl geng::State for State {
             );
         }
 
+        for effect in &self.effects {
+            let t = effect.time / effect.max_time;
+            if let Some(texture) = &effect.back_texture {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::unit_colored(
+                        &**texture,
+                        Rgba {
+                            a: (1.0 - t) * effect.color.a,
+                            ..effect.color
+                        },
+                    )
+                    .scale_uniform(1.0 + t * effect.size)
+                    .translate(effect.pos + vec2(0.0, -effect.offset)),
+                );
+            }
+        }
+
         for guy in &self.guys {
             self.geng.draw_2d(
                 framebuffer,
@@ -611,6 +661,25 @@ impl geng::State for State {
                 &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
                     .fit_into(name_aabb),
             );
+        }
+
+        for effect in &self.effects {
+            let t = effect.time / effect.max_time;
+            if let Some(texture) = &effect.front_texture {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::unit_colored(
+                        &**texture,
+                        Rgba {
+                            a: (1.0 - t) * effect.color.a,
+                            ..effect.color
+                        },
+                    )
+                    .scale_uniform(1.0 + t * effect.size)
+                    .translate(effect.pos + vec2(0.0, -1.0)),
+                );
+            }
         }
 
         let ui_camera = geng::Camera2d {
@@ -788,6 +857,21 @@ impl geng::State for State {
                         {
                             guy.health += self.assets.config.health_increase_per_level;
                             guy.max_health += self.assets.config.health_increase_per_level;
+                            let position = guy.position;
+                            let mut effect = self.assets.levelup_sfx.effect();
+                            effect.set_volume(self.assets.config.volume);
+                            effect.play();
+                            self.effects.push(Effect {
+                                pos: guy.position,
+                                offset: 1.0,
+                                size: 1.0,
+                                time: 0.0,
+                                max_time: 1.35,
+                                back_texture: Some(self.assets.levelup.clone()),
+                                front_texture: Some(self.assets.levelup_front.clone()),
+                                guy_id: Some(guy.id),
+                                color: Rgba::YELLOW,
+                            });
                         }
                     }
                     geng::MouseButton::Right => {
@@ -828,6 +912,16 @@ impl geng::State for State {
     }
     fn update(&mut self, delta_time: f64) {
         let delta_time = delta_time as f32;
+
+        for effect in &mut self.effects {
+            effect.time += delta_time;
+            if let Some(id) = effect.guy_id {
+                if let Some(guy) = self.guys.get(&id) {
+                    effect.pos = guy.position;
+                }
+            }
+        }
+        self.effects.retain(|effect| effect.time < effect.max_time);
 
         let was_idle = self.idle_fade != 1.0;
         // TODO: window.is_minimized?
@@ -966,6 +1060,21 @@ impl geng::State for State {
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                             guy.health += self.assets.config.health_increase_per_level;
                             guy.max_health += self.assets.config.health_increase_per_level;
+                            let mut effect = self.assets.levelup_sfx.effect();
+                            effect.set_volume(self.assets.config.volume);
+                            effect.play();
+
+                            self.effects.push(Effect {
+                                pos: guy.position,
+                                offset: 1.0,
+                                size: 1.0,
+                                time: 0.0,
+                                max_time: 1.35,
+                                back_texture: Some(self.assets.levelup.clone()),
+                                front_texture: Some(self.assets.levelup_front.clone()),
+                                guy_id: Some(guy.id),
+                                color: Rgba::YELLOW,
+                            });
                         }
                         let level = self.db.find_level(&name, false) + 1;
                         self.db.set_level(&name, level);
