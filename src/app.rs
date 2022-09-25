@@ -120,6 +120,7 @@ struct BackgroundEntity {
     color: Rgba<f32>,
 }
 
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 enum RaffleMode {
     Regular,
     Ld,
@@ -687,10 +688,35 @@ impl geng::State for State {
             let winner = self.guys.iter().next().unwrap();
             if !self.winning_screen {
                 if !self.opt.no_chat_spam {
-                    self.delayed_messages.push(DelayedMessage {
-                        time: self.time + 5.0,
-                        message: format!("Winner is {} 🎉", winner.name),
-                    });
+                    match self.raffle_mode {
+                        RaffleMode::Regular => {
+                            self.delayed_messages.push(DelayedMessage {
+                                time: self.time + 5.0,
+                                message: format!("Winner is {} 🎉", winner.name),
+                            });
+                        }
+                        RaffleMode::Ld => match self.db.find_game_link(&winner.name) {
+                            Some(game_link) => {
+                                self.db.set_game_played(&winner.name, true);
+                                self.delayed_messages.push(DelayedMessage {
+                                    time: self.time + 5.0,
+                                    message: format!(
+                                        "Winner is {} 🎉 Now we play {}",
+                                        winner.name, game_link
+                                    ),
+                                });
+                            }
+                            None => {
+                                self.delayed_messages.push(DelayedMessage {
+                                    time: self.time + 5.0,
+                                    message: format!(
+                                        "Winner is {} 🎉 No game was submitted? :(",
+                                        winner.name
+                                    ),
+                                });
+                            }
+                        },
+                    }
                 }
                 self.winning_screen = true;
                 let mut sound_effect = self.assets.win_sfx.effect();
@@ -872,6 +898,26 @@ impl geng::State for State {
             match message {
                 ttv::Message::Irc(ttv::IrcMessage::Privmsg(message)) => {
                     let name = message.sender.name.as_str();
+                    if let Some(url) = message.message_text.strip_prefix("!submit") {
+                        let url = url.trim();
+                        if url.is_empty() {
+                            self.ttv_client
+                                .reply("Submit using !submit <url>", &message);
+                        } else {
+                            if self.db.game_played(name) {
+                                self.ttv_client
+                                    .reply("We have already played your game", &message);
+                            } else {
+                                if self.db.find_game_link(name).is_some() {
+                                    self.ttv_client
+                                        .reply("You have already submitted a game tho", &message);
+                                } else {
+                                    self.db.set_game_link(name, Some(url));
+                                    self.ttv_client.reply("Submission successful", &message);
+                                }
+                            }
+                        }
+                    }
                     match message.message_text.trim() {
                         "!fight" | "!join" => {
                             if self.idle {
@@ -881,7 +927,14 @@ impl geng::State for State {
                                 if self.guys.iter().any(|guy| guy.name == name) {
                                     self.ttv_client.reply("No cheating allowed 🚫", &message);
                                 } else {
-                                    self.spawn_guy(name.to_owned(), false);
+                                    if self.raffle_mode == RaffleMode::Ld
+                                        && self.db.find_game_link(name).is_none()
+                                    {
+                                        self.ttv_client
+                                            .reply("You should !submit first!", &message);
+                                    } else {
+                                        self.spawn_guy(name.to_owned(), false);
+                                    }
                                 }
                             } else {
                                 self.ttv_client.reply(

@@ -87,6 +87,44 @@ impl Db {
             }
         });
     }
+
+    pub fn find_game_link(&self, name: &str) -> Option<String> {
+        block_on(async {
+            let result: Option<(Option<String>,)> =
+                sqlx::query_as("SELECT `game_link` FROM `Guy` WHERE `name`=?")
+                    .bind(name)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .unwrap();
+            result.and_then(|(url,)| url)
+        })
+    }
+
+    pub fn game_played(&self, name: &str) -> bool {
+        block_on(async {
+            let result: Option<(bool,)> =
+                sqlx::query_as("SELECT `game_played` FROM `Guy` WHERE `name`=?")
+                    .bind(name)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .unwrap();
+            result.map_or(false, |(played,)| played)
+        })
+    }
+    pub fn set_game_played(&self, name: &str, played: bool) {
+        block_on(async {
+            assert!(
+                sqlx::query("UPDATE `Guy` SET `game_played`=? WHERE `name`=?")
+                    .bind(played)
+                    .bind(name)
+                    .execute(&self.pool)
+                    .await
+                    .unwrap()
+                    .rows_affected()
+                    == 1
+            );
+        });
+    }
 }
 
 #[test]
@@ -100,4 +138,12 @@ fn test_db() {
     db.set_game_link("kuviman", None);
     db.set_game_link("random_dude", Some("123"));
     db.set_game_link("random_dude2", None);
+    assert_eq!(db.find_game_link("random_dude").as_deref(), Some("123"));
+    assert_eq!(db.find_game_link("random_dude2").as_deref(), None);
+    assert_eq!(db.find_game_link("kuviman").as_deref(), None);
+    assert_eq!(db.find_game_link("non_existent_dude").as_deref(), None);
+    db.set_game_played("kuviman", true);
+    assert!(db.game_played("kuviman"));
+    assert!(!db.game_played("non_existent_dude"));
+    assert!(!db.game_played("random_dude"));
 }
