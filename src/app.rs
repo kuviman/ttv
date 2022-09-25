@@ -272,24 +272,27 @@ impl State {
         for guy in &mut self.guys {
             guy.position += guy.velocity * delta_time;
         }
-        let mut moves = Vec::new();
-        for id in &ids {
-            let mut guy = self.guys.remove(id).unwrap();
-            for other in &self.guys {
-                let delta_pos = guy.position - other.position;
-                let len = delta_pos.len();
-                if len < State::MIN_DISTANCE {
-                    let v = delta_pos.normalize_or_zero();
-                    moves.push((guy.id, v * (State::MIN_DISTANCE - len) / 2.0));
-                    guy.velocity -= v * Vec2::dot(guy.velocity, v);
+        // Guys do be colliding
+        for _ in 0..10 {
+            let mut moves = Vec::new();
+            for id in &ids {
+                let mut guy = self.guys.remove(id).unwrap();
+                for other in &self.guys {
+                    let delta_pos = guy.position - other.position;
+                    let len = delta_pos.len();
+                    if len < State::MIN_DISTANCE {
+                        let v = delta_pos.normalize_or_zero();
+                        moves.push((guy.id, v * (State::MIN_DISTANCE - len) / 2.0));
+                        guy.velocity -= v * Vec2::dot(guy.velocity, v);
+                    }
                 }
+                self.guys.insert(guy);
             }
-            self.guys.insert(guy);
-        }
-        for (id, v) in moves {
-            let mut guy = self.guys.remove(&id).unwrap();
-            guy.position += v;
-            self.guys.insert(guy);
+            for (id, v) in moves {
+                let mut guy = self.guys.remove(&id).unwrap();
+                guy.position += v;
+                self.guys.insert(guy);
+            }
         }
     }
 
