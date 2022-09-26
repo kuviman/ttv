@@ -1136,6 +1136,20 @@ impl geng::State for State {
                             if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                                 guy.skin = skin;
                             }
+                        } else {
+                            self.ttv_client.reply(
+                                &format!(
+                                    "Hat options: {}",
+                                    self.assets
+                                        .guy
+                                        .hat
+                                        .keys()
+                                        .map(|s| s.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                ),
+                                &message,
+                            );
                         }
                     }
                     if let Some(face) = message_text.strip_prefix("!face") {
@@ -1147,6 +1161,20 @@ impl geng::State for State {
                             if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                                 guy.skin = skin;
                             }
+                        } else {
+                            self.ttv_client.reply(
+                                &format!(
+                                    "Face options: {}",
+                                    self.assets
+                                        .guy
+                                        .face
+                                        .keys()
+                                        .map(|s| s.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                ),
+                                &message,
+                            );
                         }
                     }
                     if let Some(robe) = message_text.strip_prefix("!robe") {
@@ -1158,6 +1186,20 @@ impl geng::State for State {
                             if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                                 guy.skin = skin;
                             }
+                        } else {
+                            self.ttv_client.reply(
+                                &format!(
+                                    "Robe options: {}",
+                                    self.assets
+                                        .guy
+                                        .robe
+                                        .keys()
+                                        .map(|s| s.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                ),
+                                &message,
+                            );
                         }
                     }
                     if let Some(beard) = message_text.strip_prefix("!beard") {
@@ -1169,6 +1211,20 @@ impl geng::State for State {
                             if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
                                 guy.skin = skin;
                             }
+                        } else {
+                            self.ttv_client.reply(
+                                &format!(
+                                    "Beard options: {}",
+                                    self.assets
+                                        .guy
+                                        .beard
+                                        .keys()
+                                        .map(|s| s.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                ),
+                                &message,
+                            );
                         }
                     }
                     match message_text.trim() {
