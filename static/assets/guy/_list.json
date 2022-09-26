@@ -17,7 +17,8 @@
         "2",
         "3"
     ],
-    "custom": [
-        "tank"
-    ]
+    "custom": {
+        "BrainoidGames": "tank",
+        "kuviman": "tank"
+    }
 }

@@ -125,6 +125,80 @@ impl Db {
             );
         });
     }
+    pub fn enforce_guy_exists(&self, name: &str) {
+        block_on(async {
+            if sqlx::query("SELECT `name` FROM `Guy` WHERE `name`=?")
+                .bind(name)
+                .fetch_optional(&self.pool)
+                .await
+                .unwrap()
+                .is_none()
+            {
+                sqlx::query("INSERT INTO `Guy` (`name`) VALUES (?)")
+                    .bind(name)
+                    .execute(&self.pool)
+                    .await
+                    .unwrap();
+            }
+        });
+    }
+    pub fn find_skin(&self, name: &str) -> Option<Skin> {
+        block_on(async {
+            if sqlx::query_as::<_, (Option<String>,)>("SELECT `face` FROM `Guy` WHERE `name`=?")
+                .bind(name)
+                .fetch_optional(&self.pool)
+                .await
+                .unwrap()
+                .and_then(|(face,)| face)
+                .is_none()
+            {
+                return None;
+            }
+            Some(
+                sqlx::query_as(
+                    "SELECT
+                    `face`,
+                    `hat`,
+                    `robe`,
+                    `beard`,
+                    `custom_skin`,
+                    `outfit_color` FROM `Guy`
+                    WHERE `name`=?",
+                )
+                .bind(name)
+                .fetch_one(&self.pool)
+                .await
+                .unwrap(),
+            )
+        })
+    }
+    pub fn set_skin(&self, name: &str, skin: &Skin) {
+        self.enforce_guy_exists(name);
+        block_on(async {
+            let rows_affected = sqlx::query(
+                "UPDATE `Guy` SET
+                `face`=?,
+                `hat`=?,
+                `robe`=?,
+                `beard`=?,
+                `custom_skin`=?,
+                `outfit_color`=?
+                WHERE `name`=?",
+            )
+            .bind(&skin.face)
+            .bind(&skin.hat)
+            .bind(&skin.robe)
+            .bind(&skin.beard)
+            .bind(&skin.custom)
+            .bind(skin.outfit_color.to_string())
+            .bind(name)
+            .execute(&self.pool)
+            .await
+            .unwrap()
+            .rows_affected();
+            assert_eq!(rows_affected, 1);
+        });
+    }
 }
 
 #[test]
@@ -146,4 +220,17 @@ fn test_db() {
     assert!(db.game_played("kuviman"));
     assert!(!db.game_played("non_existent_dude"));
     assert!(!db.game_played("random_dude"));
+
+    let skin = Skin {
+        face: "face".to_owned(),
+        hat: "hat".to_owned(),
+        robe: "robe".to_owned(),
+        beard: "beard".to_owned(),
+        custom: None,
+        outfit_color: Rgba::YELLOW,
+    };
+    assert_eq!(db.find_skin("kuviman"), None);
+    db.set_skin("kuviman", &skin);
+    db.set_skin("someone", &skin);
+    assert_eq!(db.find_skin("kuviman"), Some(skin));
 }

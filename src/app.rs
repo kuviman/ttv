@@ -47,6 +47,7 @@ pub struct GuyAssets {
     pub robe: HashMap<String, Texture>,
     pub beard: HashMap<String, Texture>,
     pub custom: HashMap<String, Texture>,
+    pub custom_map: HashMap<String, String>,
 }
 
 impl geng::LoadAsset for GuyAssets {
@@ -63,7 +64,7 @@ impl geng::LoadAsset for GuyAssets {
                 face: Vec<String>,
                 robe: Vec<String>,
                 beard: Vec<String>,
-                custom: Vec<String>,
+                custom: HashMap<String, String>,
             }
             let config: Config = serde_json::from_str(&json)?;
             let geng = &geng;
@@ -98,9 +99,13 @@ impl geng::LoadAsset for GuyAssets {
                 beard: load_map("beard".to_owned(), config.beard)
                     .await
                     .context("Failed to load outfits")?,
-                custom: load_map("custom".to_owned(), config.custom)
-                    .await
-                    .context("Failed to load outfits")?,
+                custom: load_map(
+                    "custom".to_owned(),
+                    config.custom.values().cloned().collect(),
+                )
+                .await
+                .context("Failed to load outfits")?,
+                custom_map: config.custom,
             })
         }
         .boxed_local()
@@ -154,13 +159,8 @@ struct Guy {
     max_health: usize,
     velocity: Vec2<f32>,
     position: Vec2<f32>,
+    skin: Skin,
     spawn: f32,
-    face: String,
-    hat: String,
-    robe: String,
-    beard: String,
-    custom: Option<String>,
-    outfit_color: Rgba<f32>,
 }
 
 #[derive(Debug)]
@@ -482,6 +482,7 @@ impl State {
         self.next_id += 1;
         self.guys.insert(Guy {
             id,
+            skin: self.find_skin(&name),
             name,
             position: std::iter::from_fn(|| {
                 Some(
@@ -513,45 +514,6 @@ impl State {
             health,
             max_health: health,
             spawn: 0.0,
-            face: self
-                .assets
-                .guy
-                .face
-                .keys()
-                .choose(&mut global_rng())
-                .unwrap()
-                .clone(),
-            hat: self
-                .assets
-                .guy
-                .hat
-                .keys()
-                .choose(&mut global_rng())
-                .unwrap()
-                .clone(),
-            robe: self
-                .assets
-                .guy
-                .robe
-                .keys()
-                .choose(&mut global_rng())
-                .unwrap()
-                .clone(),
-            beard: self
-                .assets
-                .guy
-                .beard
-                .keys()
-                .choose(&mut global_rng())
-                .unwrap()
-                .clone(),
-            custom: None,
-            outfit_color: *self
-                .assets
-                .config
-                .guy_palette
-                .choose(&mut global_rng())
-                .unwrap(),
         });
 
         let mut sound_effect = self
@@ -579,6 +541,18 @@ impl State {
         sfx.set_volume(self.assets.config.volume * 3.0);
         sfx.play();
         self.raffle_mode = mode;
+    }
+
+    fn find_skin(&self, name: &str) -> Skin {
+        if let Some(skin) = self.db.find_skin(name) {
+            return skin;
+        }
+        let mut skin = Skin::random(&self.assets);
+        if let Some(custom) = self.assets.guy.custom_map.get(name) {
+            skin.custom = Some(custom.to_owned());
+        }
+        self.db.set_skin(name, &skin);
+        skin
     }
 }
 
@@ -669,41 +643,52 @@ impl geng::State for State {
         }
 
         for guy in &self.guys {
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &geng::draw_2d::TexturedQuad::new(
-                    AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.face[&guy.face],
-                ),
-            );
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &geng::draw_2d::TexturedQuad::colored(
-                    AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.hat[&guy.hat],
-                    guy.outfit_color,
-                ),
-            );
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &geng::draw_2d::TexturedQuad::colored(
-                    AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.robe[&guy.robe],
-                    guy.outfit_color,
-                ),
-            );
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &geng::draw_2d::TexturedQuad::colored(
-                    AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.beard[&guy.beard],
-                    self.assets.config.beard_color,
-                ),
-            );
+            if let Some(custom) = &guy.skin.custom {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::new(
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        &self.assets.guy.custom[custom],
+                    ),
+                );
+            } else {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::new(
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        &self.assets.guy.face[&guy.skin.face],
+                    ),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::colored(
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        &self.assets.guy.hat[&guy.skin.hat],
+                        guy.skin.outfit_color,
+                    ),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::colored(
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        &self.assets.guy.robe[&guy.skin.robe],
+                        guy.skin.outfit_color,
+                    ),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &geng::draw_2d::TexturedQuad::colored(
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        &self.assets.guy.beard[&guy.skin.beard],
+                        self.assets.config.beard_color,
+                    ),
+                );
+            }
             let hp_text_aabb =
                 AABB::point(guy.position + vec2(-State::GUY_RADIUS, State::GUY_RADIUS) * 1.5)
                     .extend_uniform(State::GUY_RADIUS * 0.5);
@@ -1142,6 +1127,50 @@ impl geng::State for State {
                             }
                         }
                     }
+                    if let Some(hat) = message_text.strip_prefix("!hat") {
+                        let hat = hat.trim();
+                        if self.assets.guy.hat.contains_key(hat) {
+                            let mut skin = self.find_skin(name);
+                            skin.hat = hat.to_owned();
+                            self.db.set_skin(name, &skin);
+                            if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                                guy.skin = skin;
+                            }
+                        }
+                    }
+                    if let Some(face) = message_text.strip_prefix("!face") {
+                        let face = face.trim();
+                        if self.assets.guy.face.contains_key(face) {
+                            let mut skin = self.find_skin(name);
+                            skin.face = face.to_owned();
+                            self.db.set_skin(name, &skin);
+                            if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                                guy.skin = skin;
+                            }
+                        }
+                    }
+                    if let Some(robe) = message_text.strip_prefix("!robe") {
+                        let robe = robe.trim();
+                        if self.assets.guy.robe.contains_key(robe) {
+                            let mut skin = self.find_skin(name);
+                            skin.robe = robe.to_owned();
+                            self.db.set_skin(name, &skin);
+                            if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                                guy.skin = skin;
+                            }
+                        }
+                    }
+                    if let Some(beard) = message_text.strip_prefix("!beard") {
+                        let beard = beard.trim();
+                        if self.assets.guy.beard.contains_key(beard) {
+                            let mut skin = self.find_skin(name);
+                            skin.beard = beard.to_owned();
+                            self.db.set_skin(name, &skin);
+                            if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                                guy.skin = skin;
+                            }
+                        }
+                    }
                     match message_text.trim() {
                         "!fight" | "!join" => {
                             if self.idle {
@@ -1181,6 +1210,10 @@ impl geng::State for State {
                         }
                         "!raffle royale ld" if name == "kuviman" => {
                             self.start_raffle(RaffleMode::Ld);
+                        }
+                        "!skin" => {
+                            let skin = self.find_skin(name);
+                            self.ttv_client.reply(&skin.to_string(), &message);
                         }
                         _ => {}
                     }
