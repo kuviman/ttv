@@ -225,6 +225,7 @@ struct Effect {
     pos: Vec2<f32>,
     offset: f32,
     size: f32,
+    scale_up: f32,
     time: f32,
     max_time: f32,
     back_texture: Option<Rc<Texture>>,
@@ -393,7 +394,8 @@ impl State {
 
                         self.effects.push(Effect {
                             pos: guy.position,
-                            offset: 0.0,
+                            scale_up: 1.0,
+                            offset: 0.3,
                             size: 1.0,
                             time: 0.0,
                             max_time: 0.7,
@@ -660,7 +662,7 @@ impl geng::State for State {
                             ..effect.color
                         },
                     )
-                    .scale_uniform(1.0 + t * effect.size)
+                    .scale_uniform(1.0 + t * effect.size * effect.scale_up)
                     .translate(effect.pos + vec2(0.0, -effect.offset)),
                 );
             }
@@ -775,8 +777,8 @@ impl geng::State for State {
                             ..effect.color
                         },
                     )
-                    .scale_uniform(1.0 + t * effect.size)
-                    .translate(effect.pos + vec2(0.0, -1.0)),
+                    .scale_uniform(1.0 + t * effect.size * effect.scale_up)
+                    .translate(effect.pos + vec2(0.0, -effect.offset)),
                 );
             }
         }
@@ -961,6 +963,7 @@ impl geng::State for State {
                             effect.play();
                             self.effects.push(Effect {
                                 pos: guy.position,
+                                scale_up: 0.2,
                                 offset: 1.0,
                                 size: 1.0,
                                 time: 0.0,
@@ -973,6 +976,26 @@ impl geng::State for State {
                         }
                     }
                     geng::MouseButton::Right => {
+                        for guy in &self.guys {
+                            if (guy.position - position).len() < State::GUY_RADIUS {
+                                self.effects.push(Effect {
+                                    pos: guy.position,
+                                    scale_up: 1.0,
+                                    offset: 0.3,
+                                    size: 1.0,
+                                    time: 0.0,
+                                    max_time: 0.7,
+                                    back_texture: None,
+                                    front_texture: Some(self.assets.skull.clone()),
+                                    guy_id: Some(guy.id),
+                                    color: Rgba::BLACK,
+                                });
+
+                                let mut sound_effect = self.assets.death_sfx.effect();
+                                sound_effect.set_volume(self.assets.config.volume * 0.5);
+                                sound_effect.play();
+                            }
+                        }
                         self.guys
                             .retain(|guy| (guy.position - position).len() > State::GUY_RADIUS);
                     }
@@ -1173,6 +1196,7 @@ impl geng::State for State {
 
                             self.effects.push(Effect {
                                 pos: guy.position,
+                                scale_up: 0.2,
                                 offset: 1.0,
                                 size: 1.0,
                                 time: 0.0,
