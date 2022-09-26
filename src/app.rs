@@ -10,6 +10,7 @@ pub struct Config {
     pub volume: f64,
     pub guy_palette: Vec<Rgba<f32>>,
     pub background_palette: Vec<Rgba<f32>>,
+    pub beard_color: Rgba<f32>,
 }
 
 #[derive(Deref)]
@@ -40,14 +41,71 @@ impl geng::LoadAsset for Texture {
     const DEFAULT_EXT: Option<&'static str> = Some("png");
 }
 
-#[derive(geng::Assets)]
 pub struct GuyAssets {
-    #[asset(range = "1..=1", path = "hat/*.png")]
-    pub hat: Vec<Texture>,
-    #[asset(range = "1..=1", path = "pants/*.png")]
-    pub pants: Vec<Texture>,
-    #[asset(range = "1..=2", path = "face/*.png")]
-    pub face: Vec<Texture>,
+    pub hat: HashMap<String, Texture>,
+    pub face: HashMap<String, Texture>,
+    pub robe: HashMap<String, Texture>,
+    pub beard: HashMap<String, Texture>,
+    pub custom: HashMap<String, Texture>,
+}
+
+impl geng::LoadAsset for GuyAssets {
+    fn load(geng: &Geng, path: &std::path::Path) -> geng::AssetFuture<Self> {
+        let geng = geng.clone();
+        let path = path.to_owned();
+        async move {
+            let json = <String as geng::LoadAsset>::load(&geng, &path.join("_list.json"))
+                .await
+                .context("Failed to load config")?;
+            #[derive(Deserialize)]
+            struct Config {
+                hat: Vec<String>,
+                face: Vec<String>,
+                robe: Vec<String>,
+                beard: Vec<String>,
+                custom: Vec<String>,
+            }
+            let config: Config = serde_json::from_str(&json)?;
+            let geng = &geng;
+            let path = &path;
+            let load_map = |class: String, list: Vec<String>| async move {
+                Ok::<_, anyhow::Error>(
+                    future::join_all(list.iter().map(move |name| {
+                        <Texture as geng::LoadAsset>::load(
+                            &geng,
+                            &path.join(&class).join(format!("{}.png", name)),
+                        )
+                        .map(move |texture| (name, texture))
+                    }))
+                    .await
+                    .into_iter()
+                    .map(move |(name, texture)| {
+                        texture.map(|texture| (name.clone(), texture)).unwrap()
+                    })
+                    .collect::<HashMap<String, Texture>>(),
+                )
+            };
+            Ok(Self {
+                hat: load_map("hat".to_owned(), config.hat)
+                    .await
+                    .context("Failed to load outfits")?,
+                robe: load_map("robe".to_owned(), config.robe)
+                    .await
+                    .context("Failed to load outfits")?,
+                face: load_map("face".to_owned(), config.face)
+                    .await
+                    .context("Failed to load faces")?,
+                beard: load_map("beard".to_owned(), config.beard)
+                    .await
+                    .context("Failed to load outfits")?,
+                custom: load_map("custom".to_owned(), config.custom)
+                    .await
+                    .context("Failed to load outfits")?,
+            })
+        }
+        .boxed_local()
+    }
+    const DEFAULT_EXT: Option<&'static str> = None;
 }
 
 #[derive(geng::Assets)]
@@ -97,9 +155,11 @@ struct Guy {
     velocity: Vec2<f32>,
     position: Vec2<f32>,
     spawn: f32,
-    hat: usize,
-    pants: usize,
-    face: usize,
+    face: String,
+    hat: String,
+    robe: String,
+    beard: String,
+    custom: Option<String>,
     outfit_color: Rgba<f32>,
 }
 
@@ -451,9 +511,39 @@ impl State {
             health,
             max_health: health,
             spawn: 0.0,
-            face: global_rng().gen_range(0..self.assets.guy.face.len()),
-            pants: global_rng().gen_range(0..self.assets.guy.pants.len()),
-            hat: global_rng().gen_range(0..self.assets.guy.hat.len()),
+            face: self
+                .assets
+                .guy
+                .face
+                .keys()
+                .choose(&mut global_rng())
+                .unwrap()
+                .clone(),
+            hat: self
+                .assets
+                .guy
+                .hat
+                .keys()
+                .choose(&mut global_rng())
+                .unwrap()
+                .clone(),
+            robe: self
+                .assets
+                .guy
+                .robe
+                .keys()
+                .choose(&mut global_rng())
+                .unwrap()
+                .clone(),
+            beard: self
+                .assets
+                .guy
+                .beard
+                .keys()
+                .choose(&mut global_rng())
+                .unwrap()
+                .clone(),
+            custom: None,
             outfit_color: *self
                 .assets
                 .config
@@ -582,7 +672,7 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::new(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.face[guy.face],
+                    &self.assets.guy.face[&guy.face],
                 ),
             );
             self.geng.draw_2d(
@@ -590,7 +680,7 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::colored(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.pants[guy.pants],
+                    &self.assets.guy.hat[&guy.hat],
                     guy.outfit_color,
                 ),
             );
@@ -599,8 +689,17 @@ impl geng::State for State {
                 &self.camera,
                 &geng::draw_2d::TexturedQuad::colored(
                     AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
-                    &self.assets.guy.hat[guy.hat],
+                    &self.assets.guy.robe[&guy.robe],
                     guy.outfit_color,
+                ),
+            );
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &geng::draw_2d::TexturedQuad::colored(
+                    AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                    &self.assets.guy.beard[&guy.beard],
+                    self.assets.config.beard_color,
                 ),
             );
             let hp_text_aabb =
@@ -857,7 +956,6 @@ impl geng::State for State {
                         {
                             guy.health += self.assets.config.health_increase_per_level;
                             guy.max_health += self.assets.config.health_increase_per_level;
-                            let position = guy.position;
                             let mut effect = self.assets.levelup_sfx.effect();
                             effect.set_volume(self.assets.config.volume);
                             effect.play();

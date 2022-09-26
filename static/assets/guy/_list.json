@@ -1,0 +1,23 @@
+{
+    "face": [
+        "1",
+        "2"
+    ],
+    "hat": [
+        "curved",
+        "pointy",
+        "hood"
+    ],
+    "robe": [
+        "open",
+        "closed"
+    ],
+    "beard": [
+        "1",
+        "2",
+        "3"
+    ],
+    "custom": [
+        "tank"
+    ]
+}
