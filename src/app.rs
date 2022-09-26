@@ -991,8 +991,17 @@ impl geng::State for State {
         while let Some(message) = self.ttv_client.next_message() {
             match message {
                 ttv::Message::Irc(ttv::IrcMessage::Privmsg(message)) => {
-                    let name = message.sender.name.as_str();
-                    if let Some(url) = message.message_text.strip_prefix("!submit") {
+                    let mut name = message.sender.name.as_str();
+                    let mut message_text = message.message_text.as_str();
+                    if name == "kuviman" {
+                        if let Some(text) = message_text.strip_prefix("!as") {
+                            if let Some((as_name, text)) = text.trim().split_once(' ') {
+                                name = as_name.trim();
+                                message_text = text.trim();
+                            }
+                        }
+                    }
+                    if let Some(url) = message_text.strip_prefix("!submit") {
                         let url = url.trim();
                         if url.is_empty() {
                             self.ttv_client
@@ -1012,7 +1021,7 @@ impl geng::State for State {
                             }
                         }
                     }
-                    match message.message_text.trim() {
+                    match message_text.trim() {
                         "!fight" | "!join" => {
                             if self.idle {
                                 self.ttv_client
