@@ -288,7 +288,7 @@ impl State {
             lobby_music,
             battle_music,
             battle_fade: 0.0,
-            db: Db::new(&Secrets::read().unwrap().config.db.url),
+            db: Db::new(&Secrets::init().unwrap().config.db.url),
             victory_fade: 0.0,
             background_entities: std::iter::from_fn(|| {
                 let d = 50.0;

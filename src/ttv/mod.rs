@@ -51,7 +51,7 @@ impl Client {
         let config = ClientConfig::new_simple(StaticLoginCredentials::new(
             "kuvibot".to_owned(),
             Some(
-                Secrets::read()
+                Secrets::init()
                     .unwrap()
                     .ttv_access_token("kuvibot")
                     .unwrap(),
@@ -114,7 +114,7 @@ impl Client {
 }
 
 fn pubsub(sender: UnboundedSender<Message>) {
-    let secrets = Secrets::read().unwrap();
+    let secrets = Secrets::init().unwrap();
     let access_token = secrets.ttv_access_token("kuviman").unwrap();
     let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

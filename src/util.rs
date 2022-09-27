@@ -3,8 +3,8 @@ use super::*;
 use reqwest::Url;
 
 pub fn block_on<F: Future>(future: F) -> F::Output {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        handle.block_on(future)
+    if let Ok(_handle) = tokio::runtime::Handle::try_current() {
+        panic!("Running blocking code in async code is bad, you know there is spawn_blocking");
     } else {
         let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()

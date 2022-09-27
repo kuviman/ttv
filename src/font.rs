@@ -1,3 +1,6 @@
+// Drawing text with outline
+// TODO: should be moved into the engine
+
 use super::*;
 
 const SHADER_SOURCE: &'static str = "

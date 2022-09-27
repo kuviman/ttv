@@ -23,13 +23,13 @@ pub struct Secrets {
 }
 
 impl Secrets {
-    pub fn new(path: impl AsRef<std::path::Path>) -> eyre::Result<Self> {
+    pub fn init_from(path: impl AsRef<std::path::Path>) -> eyre::Result<Self> {
         let path = path.as_ref().to_owned();
         let config: Config = toml::from_str(&read_file(path.join("config.toml"))?)?;
         Ok(Self { path, config })
     }
-    pub fn read() -> eyre::Result<Self> {
-        Self::new(static_path().join("secret"))
+    pub fn init() -> eyre::Result<Self> {
+        Self::init_from(static_path().join("secret"))
     }
     pub fn ttv_access_token(&self, login: impl AsRef<str>) -> eyre::Result<String> {
         let tokens_file_path = self

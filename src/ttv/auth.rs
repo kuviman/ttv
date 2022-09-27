@@ -64,7 +64,7 @@ pub async fn authenticate(
     }
 
     info!("Opening {}", authorize_url);
-    open::that(authorize_url.as_str())?;
+    open::that(authorize_url.as_str())?; // Open browser
 
     debug!("Waiting for the user to be redirected to {}", redirect_uri);
     let redirected_url = wait_for_request_uri().await?;
@@ -106,7 +106,7 @@ pub async fn authenticate(
 #[ignore]
 fn test_authenticate() {
     logger::init_for_tests();
-    let secrets = secret::Secrets::read().unwrap();
+    let secrets = secret::Secrets::init().unwrap();
     info!(
         "{:?}",
         block_on(authenticate(
