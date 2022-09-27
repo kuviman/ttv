@@ -689,64 +689,79 @@ impl geng::State for State {
                     ),
                 );
             }
-            let hp_text_aabb =
-                AABB::point(guy.position + vec2(-State::GUY_RADIUS, State::GUY_RADIUS) * 1.5)
-                    .extend_uniform(State::GUY_RADIUS * 0.5);
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Ellipse::unit(Rgba::BLACK).fit_into(hp_text_aabb),
-            );
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Text::unit(
-                    &**self.geng.default_font(),
-                    format!("{}/{}", guy.health, guy.max_health),
-                    Hsva::new(
-                        guy.health as f32 / guy.max_health as f32 / 3.0,
-                        1.0,
-                        1.0,
-                        1.0,
+
+            if let Some(pos) = self.camera.world_to_screen(
+                self.framebuffer_size.map(|x| x as f32),
+                guy.position + vec2(0.0, State::GUY_RADIUS),
+            ) {
+                let label_camera = if true {
+                    self.camera.clone()
+                } else {
+                    geng::Camera2d {
+                        center: Vec2::ZERO,
+                        rotation: 0.0,
+                        fov: 20.0_f32.max(self.camera.fov),
+                    }
+                };
+                let pos =
+                    label_camera.screen_to_world(self.framebuffer_size.map(|x| x as f32), pos);
+
+                let hp_text_aabb = AABB::point(pos + vec2(-1.5, 0.5)).extend_uniform(0.5);
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Ellipse::unit(Rgba::BLACK).fit_into(hp_text_aabb),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Text::unit(
+                        &**self.geng.default_font(),
+                        format!("{}/{}", guy.health, guy.max_health),
+                        Hsva::new(
+                            guy.health as f32 / guy.max_health as f32 / 3.0,
+                            1.0,
+                            1.0,
+                            1.0,
+                        )
+                        .into(),
                     )
-                    .into(),
-                )
-                .fit_into(hp_text_aabb.extend_uniform(-0.2)),
-            );
+                    .fit_into(hp_text_aabb.extend_uniform(-0.2)),
+                );
 
-            let hp_bar_aabb = AABB::point(guy.position + vec2(0.0, State::GUY_RADIUS) * 1.5)
-                .extend_symmetric(vec2(State::GUY_RADIUS, State::GUY_RADIUS * 0.1));
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Quad::new(hp_bar_aabb.extend_uniform(0.1), Rgba::BLACK),
-            );
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Quad::new(hp_bar_aabb, Rgba::RED),
-            );
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Quad::new(
-                    AABB {
-                        x_max: hp_bar_aabb.x_min
-                            + hp_bar_aabb.width() * guy.health as f32 / guy.max_health as f32,
-                        ..hp_bar_aabb
-                    },
-                    Rgba::GREEN,
-                ),
-            );
+                let hp_bar_aabb =
+                    AABB::point(pos + vec2(0.0, 0.5)).extend_symmetric(vec2(1.0, 0.1));
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Quad::new(hp_bar_aabb.extend_uniform(0.1), Rgba::BLACK),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Quad::new(hp_bar_aabb, Rgba::RED),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Quad::new(
+                        AABB {
+                            x_max: hp_bar_aabb.x_min
+                                + hp_bar_aabb.width() * guy.health as f32 / guy.max_health as f32,
+                            ..hp_bar_aabb
+                        },
+                        Rgba::GREEN,
+                    ),
+                );
 
-            let name_aabb = AABB::point(guy.position + vec2(0.0, State::GUY_RADIUS) * 2.0)
-                .extend_symmetric(vec2(State::GUY_RADIUS * 1.0, State::GUY_RADIUS * 0.2));
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
-                    .fit_into(name_aabb),
-            );
+                let name_aabb = AABB::point(pos + vec2(0.0, 1.0)).extend_symmetric(vec2(1.0, 0.2));
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
+                        .fit_into(name_aabb),
+                );
+            }
         }
 
         for effect in &self.effects {
@@ -1270,6 +1285,13 @@ impl geng::State for State {
                         "!skin" => {
                             let skin = self.find_skin(name);
                             self.ttv_client.reply(&skin.to_string(), &message);
+                        }
+                        "!skin random" => {
+                            let skin = Skin::random(&self.assets);
+                            self.db.set_skin(name, &skin);
+                            if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                                guy.skin = skin;
+                            }
                         }
                         _ => {}
                     }
