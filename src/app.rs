@@ -537,6 +537,9 @@ impl State {
         }
         self.idle = false;
         self.guys.clear();
+        self.attacks.clear();
+        self.next_attack = None;
+        self.queued_attack = None;
         let mut sfx = self.assets.title_sfx.effect();
         sfx.set_volume(self.assets.config.volume * 3.0);
         sfx.play();
@@ -700,37 +703,14 @@ impl geng::State for State {
                     geng::Camera2d {
                         center: Vec2::ZERO,
                         rotation: 0.0,
-                        fov: 20.0_f32.max(self.camera.fov),
+                        fov: 20.0_f32.max(self.camera.fov * 0.6),
                     }
                 };
                 let pos =
                     label_camera.screen_to_world(self.framebuffer_size.map(|x| x as f32), pos);
 
-                let hp_text_aabb = AABB::point(pos + vec2(-1.5, 0.5)).extend_uniform(0.5);
-                self.geng.draw_2d(
-                    framebuffer,
-                    &label_camera,
-                    &draw_2d::Ellipse::unit(Rgba::BLACK).fit_into(hp_text_aabb),
-                );
-                self.geng.draw_2d(
-                    framebuffer,
-                    &label_camera,
-                    &draw_2d::Text::unit(
-                        &**self.geng.default_font(),
-                        format!("{}/{}", guy.health, guy.max_health),
-                        Hsva::new(
-                            guy.health as f32 / guy.max_health as f32 / 3.0,
-                            1.0,
-                            1.0,
-                            1.0,
-                        )
-                        .into(),
-                    )
-                    .fit_into(hp_text_aabb.extend_uniform(-0.2)),
-                );
-
                 let hp_bar_aabb =
-                    AABB::point(pos + vec2(0.0, 0.5)).extend_symmetric(vec2(1.0, 0.1));
+                    AABB::point(pos + vec2(0.0, 0.2)).extend_symmetric(vec2(1.4, 0.2));
                 self.geng.draw_2d(
                     framebuffer,
                     &label_camera,
@@ -754,7 +734,43 @@ impl geng::State for State {
                     ),
                 );
 
-                let name_aabb = AABB::point(pos + vec2(0.0, 1.0)).extend_symmetric(vec2(1.0, 0.2));
+                if false {
+                    let hp_text_aabb = AABB::point(pos + vec2(-1.5, 0.0)).extend_uniform(0.5);
+                    self.geng.draw_2d(
+                        framebuffer,
+                        &label_camera,
+                        &draw_2d::Quad::new(hp_text_aabb, Rgba::BLACK),
+                    );
+                    self.geng.draw_2d(
+                        framebuffer,
+                        &label_camera,
+                        &draw_2d::Text::unit(
+                            &**self.geng.default_font(),
+                            format!("{}/{}", guy.health, guy.max_health),
+                            Hsva::new(
+                                guy.health as f32 / guy.max_health as f32 / 3.0,
+                                1.0,
+                                1.0,
+                                1.0,
+                            )
+                            .into(),
+                        )
+                        .fit_into(hp_text_aabb.extend_uniform(-0.2)),
+                    );
+                } else {
+                    self.geng.draw_2d(
+                        framebuffer,
+                        &label_camera,
+                        &draw_2d::Text::unit(
+                            &**self.geng.default_font(),
+                            format!("{}/{}", guy.health, guy.max_health),
+                            Rgba::BLACK,
+                        )
+                        .fit_into(hp_bar_aabb.extend_uniform(-0.1)),
+                    );
+                }
+
+                let name_aabb = AABB::point(pos + vec2(0.0, 0.8)).extend_symmetric(vec2(2.0, 0.2));
                 self.geng.draw_2d(
                     framebuffer,
                     &label_camera,
@@ -1165,6 +1181,25 @@ impl geng::State for State {
                                 ),
                                 &message,
                             );
+                        }
+                    }
+                    if let Some(parts) = message_text.strip_prefix("!setcustomskin") {
+                        if name == "kuviman" {
+                            let mut parts = parts.split_whitespace();
+                            if let Some(name) = parts.next() {
+                                if let Some(custom) = parts.next() {
+                                    if self.assets.guy.custom.contains_key(custom) {
+                                        let mut skin = self.find_skin(name);
+                                        skin.custom = Some(custom.to_owned());
+                                        self.db.set_skin(name, &skin);
+                                        if let Some(guy) =
+                                            self.guys.iter_mut().find(|guy| guy.name == name)
+                                        {
+                                            guy.skin = skin;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     if let Some(face) = message_text.strip_prefix("!face") {
