@@ -205,12 +205,12 @@ impl State {
 
     fn start_raffle(&mut self, mode: RaffleMode) {
         if !self.idle {
-            self.ttv_client.say("Raffle Royale is already going on");
+            self.ttv_client.say("Raffle Royale is already going on 😕");
             return;
         }
         if !self.opt.no_chat_spam {
             self.ttv_client
-                .say("Raffle Royale is about to begin! Type !fight to join!");
+                .say("🧙‍♀️ Raffle Royale is about to begin! Type !fight to join! 🧙‍♂️");
         }
         self.idle = false;
         self.guys.clear();

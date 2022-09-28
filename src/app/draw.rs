@@ -352,7 +352,7 @@ impl State {
                                     self.delayed_messages.push(DelayedMessage {
                                         time: self.time + 5.0,
                                         message: format!(
-                                            "Winner is {} 🎉 Your game ({}) was already played, did u cheat??", 
+                                            "Winner is {} 🎉 Your game ({}) was already played, please stop cheating?? 👀", 
                                             winner.name, game_link
                                         ),
                                     });
@@ -361,7 +361,7 @@ impl State {
                                     self.delayed_messages.push(DelayedMessage {
                                         time: self.time + 5.0,
                                         message: format!(
-                                            "Winner is {} 🎉 Now we play {}",
+                                            "Winner is {} 🎉 Now we play {} 👏",
                                             winner.name, game_link
                                         ),
                                     });
@@ -371,7 +371,7 @@ impl State {
                                 self.delayed_messages.push(DelayedMessage {
                                     time: self.time + 5.0,
                                     message: format!(
-                                        "Winner is {} 🎉 No game was submitted? :(",
+                                        "Winner is {} 🎉 No game was submitted? 😔",
                                         winner.name
                                     ),
                                 });

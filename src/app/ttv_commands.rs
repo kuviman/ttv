@@ -18,18 +18,18 @@ impl State {
                     let url = url.trim();
                     if url.is_empty() {
                         self.ttv_client
-                            .reply("Submit using !submit <url>", &message);
+                            .reply("Submit using !submit <url> 🔗", &message);
                     } else {
                         if self.db.game_played(name) {
                             self.ttv_client
-                                .reply("We have already played your game", &message);
+                                .reply("We have already played your game 😕", &message);
                         } else {
                             if self.db.find_game_link(name).is_some() {
                                 self.ttv_client
-                                    .reply("You have already submitted a game tho", &message);
+                                    .reply("You have already submitted a game tho 😕", &message);
                             } else {
                                 self.db.set_game_link(name, Some(url));
-                                self.ttv_client.reply("Submission successful", &message);
+                                self.ttv_client.reply("Submission successful 👌", &message);
                             }
                         }
                     }
@@ -46,7 +46,7 @@ impl State {
                     } else {
                         self.ttv_client.reply(
                             &format!(
-                                "Hat options: {}",
+                                "⚙️ Hat options: {}",
                                 self.assets
                                     .guy
                                     .hat
@@ -90,7 +90,7 @@ impl State {
                     } else {
                         self.ttv_client.reply(
                             &format!(
-                                "Face options: {}",
+                                "⚙️ Face options: {}",
                                 self.assets
                                     .guy
                                     .face
@@ -115,7 +115,7 @@ impl State {
                     } else {
                         self.ttv_client.reply(
                             &format!(
-                                "Robe options: {}",
+                                "⚙️ Robe options: {}",
                                 self.assets
                                     .guy
                                     .robe
@@ -140,7 +140,7 @@ impl State {
                     } else {
                         self.ttv_client.reply(
                             &format!(
-                                "Beard options: {}",
+                                "⚙️ Beard options: {}",
                                 self.assets
                                     .guy
                                     .beard
@@ -156,7 +156,7 @@ impl State {
                 if message_text.trim() == format!("!{}", self.raffle_keyword) {
                     if self.idle {
                         self.ttv_client
-                            .reply("There is no raffle going on right now", &message);
+                            .reply("You are either too late or too early 😊", &message);
                     } else if !self.process_battle {
                         if self.guys.iter().any(|guy| guy.name == name) {
                             self.ttv_client.reply("No cheating allowed 🚫", &message);
@@ -164,7 +164,8 @@ impl State {
                             if self.raffle_mode == RaffleMode::Ld
                                 && self.db.find_game_link(name).is_none()
                             {
-                                self.ttv_client.reply("You should !submit first!", &message);
+                                self.ttv_client
+                                    .reply("You should !submit first! ⏳", &message);
                             } else if self.raffle_mode == RaffleMode::Ld
                                 && self.db.game_played(name)
                             {
