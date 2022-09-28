@@ -10,7 +10,9 @@ impl State {
             *time -= delta_time * 3.0;
             if *time <= 0.0 {
                 for attack in self.attacks.drain(..) {
-                    self.guys.get_mut(&attack.target_id).unwrap().health -= 1;
+                    if let Some(guy) = self.guys.get_mut(&attack.target_id) {
+                        guy.health -= 1;
+                    }
                 }
                 for guy in &self.guys {
                     if guy.health == 0 {
@@ -53,7 +55,9 @@ impl State {
                     healths.insert(guy.id, guy.health);
                 }
                 for attack in &self.attacks {
-                    *healths.get_mut(&attack.target_id).unwrap() -= 1;
+                    if let Some(health) = healths.get_mut(&attack.target_id) {
+                        *health -= 1;
+                    }
                 }
 
                 if healths.values().filter(|health| **health == 0).count() != 0 {

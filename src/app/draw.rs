@@ -57,8 +57,14 @@ impl State {
 
         let t = 1.0 - self.next_attack.unwrap_or(0.0);
         for attack in &self.attacks {
-            let attacker = self.guys.get(&attack.attacker_id).unwrap();
-            let target = self.guys.get(&attack.target_id).unwrap();
+            let attacker = match self.guys.get(&attack.attacker_id) {
+                Some(x) => x,
+                None => continue,
+            };
+            let target = match self.guys.get(&attack.target_id) {
+                Some(x) => x,
+                None => continue,
+            };
             let v = target.position - attacker.position;
             self.geng.draw_2d(
                 framebuffer,
