@@ -11,6 +11,7 @@ pub struct Constants {
     pub guy_palette: Vec<Rgba<f32>>,
     pub background_palette: Vec<Rgba<f32>>,
     pub beard_color: Rgba<f32>,
+    pub bless_hp: usize,
 }
 
 #[derive(Deref)]

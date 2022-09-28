@@ -198,6 +198,38 @@ impl State {
                         }
                     }
                 }
+                if name == self.config.channel_login {
+                    if let Some(name) = message_text.strip_prefix("!curse") {
+                        let name = name.trim();
+                        if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                            guy.should_never_win = true;
+                        }
+                    }
+                    if let Some(name) = message_text.strip_prefix("!bless") {
+                        let name = name.trim();
+                        if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                            guy.health += self.assets.constants.bless_hp;
+                            guy.max_health += self.assets.constants.bless_hp;
+
+                            let mut effect = self.assets.levelup_sfx.effect();
+                            effect.set_volume(self.assets.constants.volume);
+                            effect.play();
+
+                            self.effects.push(Effect {
+                                pos: guy.position,
+                                scale_up: 0.2,
+                                offset: 1.0,
+                                size: 1.0,
+                                time: 0.0,
+                                max_time: 1.35,
+                                back_texture: Some(self.assets.levelup.clone()),
+                                front_texture: Some(self.assets.levelup_front.clone()),
+                                guy_id: Some(guy.id),
+                                color: Rgba::YELLOW,
+                            });
+                        }
+                    }
+                }
                 match message_text.trim() {
                     "!lvl" | "!level" => {
                         let level = self.db.find_level(&name);
