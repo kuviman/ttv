@@ -168,8 +168,8 @@ impl State {
                             } else if self.raffle_mode == RaffleMode::Ld
                                 && self.db.game_played(name)
                             {
-                                self.ttv_client
-                                    .reply("We have played your game already", &message);
+                                // self.ttv_client.reply("You shall not win", &message);
+                                self.spawn_guy(name.to_owned(), false);
                             } else {
                                 self.spawn_guy(name.to_owned(), false);
                             }

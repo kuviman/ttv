@@ -60,6 +60,17 @@ impl State {
                     }
                 }
 
+                if self.guys.iter().any(|guy| !guy.should_never_win) {
+                    if !self
+                        .guys
+                        .iter()
+                        .any(|guy| !guy.should_never_win && healths[&guy.id] != 0)
+                    {
+                        self.attacks.clear();
+                        break 'schedule_attacks;
+                    }
+                }
+
                 if healths.values().filter(|health| **health == 0).count() != 0 {
                     break 'schedule_attacks;
                 }

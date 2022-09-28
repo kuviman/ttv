@@ -202,7 +202,7 @@ impl Db {
 fn test_db() {
     logger::init_for_tests();
     let mut db = Db::new("sqlite::memory:");
-    assert!(db.find_level("kuviman") == 0);
+    assert!(db.find_level("kuviman") == 1);
     db.set_level("kuviman", 5);
     assert!(db.find_level("kuviman") == 5);
     db.set_game_link("kuviman", Some("123"));

@@ -215,7 +215,7 @@ impl State {
                         &label_camera,
                         &draw_2d::Text::unit(
                             &**self.geng.default_font(),
-                            format!("lvl 5 ({}/{})", guy.health, guy.max_health),
+                            format!("{}/{}", guy.health, guy.max_health),
                             Rgba::BLACK,
                         )
                         .fit_into(hp_bar_aabb.extend_uniform(-0.1)),
@@ -296,6 +296,19 @@ impl State {
                 .scale_uniform(0.5)
                 .translate(vec2(0.0, 2.5)),
             );
+            if self.guys.iter().any(|guy| guy.should_never_win) {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &ui_camera,
+                    &draw_2d::Text::unit(
+                        &**self.geng.default_font(),
+                        "totally not rigged",
+                        Rgba::BLACK,
+                    )
+                    .scale_uniform(0.15)
+                    .translate(vec2(0.0, 3.5)),
+                );
+            }
             self.geng.draw_2d(
                 framebuffer,
                 &ui_camera,
@@ -335,14 +348,24 @@ impl State {
                         }
                         RaffleMode::Ld => match self.db.find_game_link(&winner.name) {
                             Some(game_link) => {
-                                self.db.set_game_played(&winner.name, true);
-                                self.delayed_messages.push(DelayedMessage {
-                                    time: self.time + 5.0,
-                                    message: format!(
-                                        "Winner is {} 🎉 Now we play {}",
-                                        winner.name, game_link
-                                    ),
-                                });
+                                if self.db.game_played(&winner.name) {
+                                    self.delayed_messages.push(DelayedMessage {
+                                        time: self.time + 5.0,
+                                        message: format!(
+                                            "Winner is {} 🎉 Your game ({}) was already played, did u cheat??", 
+                                            winner.name, game_link
+                                        ),
+                                    });
+                                } else {
+                                    self.db.set_game_played(&winner.name, true);
+                                    self.delayed_messages.push(DelayedMessage {
+                                        time: self.time + 5.0,
+                                        message: format!(
+                                            "Winner is {} 🎉 Now we play {}",
+                                            winner.name, game_link
+                                        ),
+                                    });
+                                }
                             }
                             None => {
                                 self.delayed_messages.push(DelayedMessage {

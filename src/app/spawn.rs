@@ -8,6 +8,8 @@ impl State {
         self.next_id += 1;
         self.guys.insert(Guy {
             id,
+            should_never_win: random
+                || (self.raffle_mode == RaffleMode::Ld && self.db.game_played(&name)),
             skin: self.find_skin(&name, !random),
             name,
             position: std::iter::from_fn(|| {

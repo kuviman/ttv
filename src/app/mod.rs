@@ -21,6 +21,7 @@ struct Guy {
     position: Vec2<f32>,
     skin: Skin,
     spawn: f32,
+    should_never_win: bool,
 }
 
 #[derive(Debug)]
