@@ -6,7 +6,7 @@ impl State {
             ttv::Message::Irc(ttv::IrcMessage::Privmsg(message)) => {
                 let mut name = message.sender.name.as_str();
                 let mut message_text = message.message_text.as_str();
-                if name == "kuviman" {
+                if name == self.config.channel_login {
                     if let Some(text) = message_text.strip_prefix("!as") {
                         if let Some((as_name, text)) = text.trim().split_once(' ') {
                             name = as_name.trim();
@@ -60,7 +60,7 @@ impl State {
                     }
                 }
                 if let Some(parts) = message_text.strip_prefix("!setcustomskin") {
-                    if name == "kuviman" {
+                    if name == self.config.channel_login {
                         let mut parts = parts.split_whitespace();
                         if let Some(name) = parts.next() {
                             if let Some(custom) = parts.next() {
@@ -179,15 +179,15 @@ impl State {
                     }
                     "!lvl" | "!level" => {
                         let level = self.db.find_level(&name);
-                        let hp = self.assets.config.initial_health
-                            + level * self.assets.config.health_increase_per_level;
+                        let hp = self.assets.constants.initial_health
+                            + level * self.assets.constants.health_increase_per_level;
                         self.ttv_client
                             .reply(&format!("You are level {} ({} hp) ⭐", level, hp), &message);
                     }
-                    "!raffle royale" if name == "kuviman" => {
+                    "!raffle royale" if name == self.config.channel_login => {
                         self.start_raffle(RaffleMode::Regular);
                     }
-                    "!raffle royale ld" if name == "kuviman" => {
+                    "!raffle royale ld" if name == self.config.channel_login => {
                         self.start_raffle(RaffleMode::Ld);
                     }
                     "!skin" => {
@@ -207,10 +207,10 @@ impl State {
             ttv::Message::RewardRedemption { name, reward } => {
                 if reward == "Raffle Royale Level Up" {
                     if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
-                        guy.health += self.assets.config.health_increase_per_level;
-                        guy.max_health += self.assets.config.health_increase_per_level;
+                        guy.health += self.assets.constants.health_increase_per_level;
+                        guy.max_health += self.assets.constants.health_increase_per_level;
                         let mut effect = self.assets.levelup_sfx.effect();
-                        effect.set_volume(self.assets.config.volume);
+                        effect.set_volume(self.assets.constants.volume);
                         effect.play();
 
                         self.effects.push(Effect {
@@ -228,8 +228,8 @@ impl State {
                     }
                     let level = self.db.find_level(&name) + 1;
                     self.db.set_level(&name, level);
-                    let hp = self.assets.config.initial_health
-                        + level * self.assets.config.health_increase_per_level;
+                    let hp = self.assets.constants.initial_health
+                        + level * self.assets.constants.health_increase_per_level;
                     self.ttv_client
                         .say(&format!("{} is now level {} ({} hp) ⭐", name, level, hp));
                 }

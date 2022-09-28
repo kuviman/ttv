@@ -55,6 +55,7 @@ pub struct State {
     opt: Opt,
     geng: Geng,
     assets: Rc<Assets>,
+    config: Config,
     guys: Collection<Guy>,
     camera: geng::Camera2d,
     framebuffer_size: Vec2<usize>,
@@ -107,7 +108,13 @@ impl State {
     const MIN_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
     const GUY_ACCELERATION: f32 = 10.0;
-    pub fn new(geng: &Geng, assets: &Rc<Assets>, ttv_client: ttv::Client, opt: Opt) -> Self {
+    pub fn new(
+        geng: &Geng,
+        assets: &Rc<Assets>,
+        config: Config,
+        ttv_client: ttv::Client,
+        opt: Opt,
+    ) -> Self {
         if !opt.no_chat_spam {
             ttv_client.say("Hai, im online 🤖");
         }
@@ -119,6 +126,7 @@ impl State {
         battle_music.play();
 
         Self {
+            config,
             opt,
             idle: true,
             idle_fade: 0.0,
@@ -156,7 +164,7 @@ impl State {
                     texture_index: global_rng().gen_range(0..assets.background_entities.len()),
                     position: vec2(global_rng().gen_range(-d..d), global_rng().gen_range(-d..d)),
                     color: *assets
-                        .config
+                        .constants
                         .background_palette
                         .choose(&mut global_rng())
                         .unwrap(),
@@ -207,7 +215,7 @@ impl State {
         self.next_attack = None;
         self.queued_attack = None;
         let mut sfx = self.assets.title_sfx.effect();
-        sfx.set_volume(self.assets.config.volume * 3.0);
+        sfx.set_volume(self.assets.constants.volume * 3.0);
         sfx.play();
         self.raffle_mode = mode;
     }
@@ -243,7 +251,7 @@ impl State {
             0.0
         } else {
             self.idle_fade = (self.idle_fade + delta_time / 2.5).min(1.0);
-            self.assets.config.volume * if self.idle_fade == 1.0 { 1.0 } else { 0.0 }
+            self.assets.constants.volume * if self.idle_fade == 1.0 { 1.0 } else { 0.0 }
         };
         let start_music = was_idle && self.idle_fade == 1.0;
         if start_music {
@@ -324,10 +332,10 @@ impl geng::State for State {
                         if let Some(guy) =
                             iter.find(|guy| (guy.position - position).len() < State::GUY_RADIUS)
                         {
-                            guy.health += self.assets.config.health_increase_per_level;
-                            guy.max_health += self.assets.config.health_increase_per_level;
+                            guy.health += self.assets.constants.health_increase_per_level;
+                            guy.max_health += self.assets.constants.health_increase_per_level;
                             let mut effect = self.assets.levelup_sfx.effect();
-                            effect.set_volume(self.assets.config.volume);
+                            effect.set_volume(self.assets.constants.volume);
                             effect.play();
                             self.effects.push(Effect {
                                 pos: guy.position,
@@ -360,7 +368,7 @@ impl geng::State for State {
                                 });
 
                                 let mut sound_effect = self.assets.death_sfx.effect();
-                                sound_effect.set_volume(self.assets.config.volume * 0.5);
+                                sound_effect.set_volume(self.assets.constants.volume * 0.5);
                                 sound_effect.play();
                             }
                         }

@@ -30,7 +30,7 @@ impl State {
                         });
 
                         let mut sound_effect = self.assets.death_sfx.effect();
-                        sound_effect.set_volume(self.assets.config.volume * 0.5);
+                        sound_effect.set_volume(self.assets.constants.volume * 0.5);
                         sound_effect.play();
                     }
                 }

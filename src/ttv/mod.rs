@@ -40,8 +40,8 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new() -> Self {
-        let channel_login = "kuviman".to_owned();
+    pub fn new(channel_login: &str, bot_login: &str) -> Self {
+        let channel_login = channel_login.to_owned();
 
         let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -49,11 +49,11 @@ impl Client {
             .unwrap();
 
         let config = ClientConfig::new_simple(StaticLoginCredentials::new(
-            "kuvibot".to_owned(),
+            bot_login.to_owned(),
             Some(
                 Secrets::init()
                     .unwrap()
-                    .ttv_access_token("kuvibot")
+                    .ttv_access_token(bot_login)
                     .unwrap(),
             ),
         ));
@@ -85,7 +85,10 @@ impl Client {
             debug!("Ttv client thread stopped");
         });
 
-        std::thread::spawn(move || pubsub(messages_sender));
+        std::thread::spawn({
+            let channel_login = channel_login.clone();
+            move || pubsub(&channel_login, messages_sender)
+        });
 
         Self {
             channel_login: channel_login.clone(),
@@ -113,9 +116,9 @@ impl Client {
     }
 }
 
-fn pubsub(sender: UnboundedSender<Message>) {
+fn pubsub(login: &str, sender: UnboundedSender<Message>) {
     let secrets = Secrets::init().unwrap();
-    let access_token = secrets.ttv_access_token("kuviman").unwrap();
+    let access_token = secrets.ttv_access_token(login).unwrap();
     let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -123,7 +126,7 @@ fn pubsub(sender: UnboundedSender<Message>) {
     let user_id = tokio_runtime.block_on(async {
         let json = reqwest::Client::new()
             .get("https://api.twitch.tv/helix/users")
-            .query(&[("login", "kuviman")])
+            .query(&[("login", login)])
             .header("Authorization", format!("Bearer {}", access_token))
             .header("Client-ID", &secrets.config.ttv.client_id)
             .send()

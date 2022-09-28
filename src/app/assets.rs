@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Deserialize, geng::Assets)]
 #[asset(json)]
-pub struct Config {
+pub struct Constants {
     pub background: Rgba<f32>,
     pub circle: Rgba<f32>,
     pub initial_health: usize,
@@ -119,7 +119,7 @@ pub struct Assets {
     pub background: ugli::Texture,
     #[asset(range = "1..=1", path = "background_entities/*.png")]
     pub background_entities: Vec<Texture>,
-    pub config: Config,
+    pub constants: Constants,
     #[asset(path = "kuvimanPreBattle.wav")]
     pub lobby_music: geng::Sound,
     #[asset(path = "kuvimanBattle.wav")]

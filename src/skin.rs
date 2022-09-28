@@ -56,7 +56,11 @@ impl Skin {
                 .unwrap()
                 .clone(),
             custom: None,
-            outfit_color: *assets.config.guy_palette.choose(&mut global_rng()).unwrap(),
+            outfit_color: *assets
+                .constants
+                .guy_palette
+                .choose(&mut global_rng())
+                .unwrap(),
         }
     }
 }

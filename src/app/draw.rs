@@ -3,7 +3,12 @@ use super::*;
 impl State {
     pub fn draw_impl(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
-        ugli::clear(framebuffer, Some(self.assets.config.background), None, None);
+        ugli::clear(
+            framebuffer,
+            Some(self.assets.constants.background),
+            None,
+            None,
+        );
 
         {
             let vertex = |x, y| {
@@ -129,7 +134,7 @@ impl State {
                     &geng::draw_2d::TexturedQuad::colored(
                         AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.beard[&guy.skin.beard],
-                        self.assets.config.beard_color,
+                        self.assets.constants.beard_color,
                     ),
                 );
             }
@@ -347,7 +352,7 @@ impl State {
                 }
                 self.winning_screen = true;
                 let mut sound_effect = self.assets.win_sfx.effect();
-                sound_effect.set_volume(self.assets.config.volume);
+                sound_effect.set_volume(self.assets.constants.volume);
                 sound_effect.play();
             }
             self.geng.draw_2d(
@@ -356,7 +361,7 @@ impl State {
                 &font::Text::unit(
                     &self.geng,
                     &**self.geng.default_font(),
-                    if winner.name == "kuviman" {
+                    if winner.name == self.config.channel_login {
                         "RIGGED"
                     } else {
                         "WINNER"

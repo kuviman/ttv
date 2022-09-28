@@ -4,19 +4,25 @@ mod app;
 mod db;
 mod font;
 mod secret;
+mod skin;
 mod ttv;
 mod util;
-mod skin;
 
-use skin::Skin;
 use db::Db;
 use secret::Secrets;
+use skin::Skin;
 use util::*;
 
 #[derive(clap::Parser)]
 pub struct Opt {
     #[clap(long)]
     pub no_chat_spam: bool,
+}
+
+#[derive(Deserialize)]
+pub struct Config {
+    pub channel_login: String,
+    pub bot_login: String,
 }
 
 fn main() {
@@ -43,7 +49,12 @@ fn main() {
                 move |assets| {
                     let mut assets = assets.unwrap();
                     assets.process();
-                    app::State::new(&geng, &Rc::new(assets), ttv::Client::new(), opt)
+                    let config: Config = serde_json::from_reader(
+                        std::fs::File::open(static_path().join("config.json")).unwrap(),
+                    )
+                    .unwrap();
+                    let ttv_client = ttv::Client::new(&config.channel_login, &config.bot_login);
+                    app::State::new(&geng, &Rc::new(assets), config, ttv_client, opt)
                 }
             },
         ),
