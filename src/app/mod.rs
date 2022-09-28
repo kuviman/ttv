@@ -212,7 +212,7 @@ impl State {
         self.raffle_mode = mode;
     }
 
-    fn find_skin(&self, name: &str) -> Skin {
+    fn find_skin(&self, name: &str, insert_if_absent: bool) -> Skin {
         if let Some(skin) = self.db.find_skin(name) {
             return skin;
         }
@@ -220,7 +220,9 @@ impl State {
         if let Some(custom) = self.assets.guy.custom_map.get(name) {
             skin.custom = Some(custom.to_owned());
         }
-        self.db.set_skin(name, &skin);
+        if insert_if_absent {
+            self.db.set_skin(name, &skin);
+        }
         skin
     }
     fn update_impl(&mut self, delta_time: f32) {

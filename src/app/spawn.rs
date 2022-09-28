@@ -2,14 +2,14 @@ use super::*;
 
 impl State {
     pub fn spawn_guy(&mut self, name: String, random: bool) {
-        let level = self.db.find_level(&name, !random);
+        let level = self.db.find_level(&name);
         let health = self.assets.config.initial_health
             + level * self.assets.config.health_increase_per_level;
         let id = self.next_id;
         self.next_id += 1;
         self.guys.insert(Guy {
             id,
-            skin: self.find_skin(&name),
+            skin: self.find_skin(&name, !random),
             name,
             position: std::iter::from_fn(|| {
                 Some(

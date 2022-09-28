@@ -31,7 +31,7 @@ impl Db {
             }
         })
     }
-    pub fn find_level(&mut self, name: &str, insert_if_absent: bool) -> usize {
+    pub fn find_level(&mut self, name: &str) -> usize {
         let result: Option<(i64,)> = block_on(
             sqlx::query_as("SELECT `level` FROM `Guy` WHERE `name`=?")
                 .bind(name)
@@ -41,9 +41,6 @@ impl Db {
         if let Some((level,)) = result {
             level as usize
         } else {
-            if insert_if_absent {
-                self.set_level(name, 0);
-            }
             0
         }
     }
@@ -205,9 +202,9 @@ impl Db {
 fn test_db() {
     logger::init_for_tests();
     let mut db = Db::new("sqlite::memory:");
-    assert!(db.find_level("kuviman", true) == 0);
+    assert!(db.find_level("kuviman") == 0);
     db.set_level("kuviman", 5);
-    assert!(db.find_level("kuviman", true) == 5);
+    assert!(db.find_level("kuviman") == 5);
     db.set_game_link("kuviman", Some("123"));
     db.set_game_link("kuviman", None);
     db.set_game_link("random_dude", Some("123"));

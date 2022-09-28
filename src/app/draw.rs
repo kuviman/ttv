@@ -291,7 +291,7 @@ impl State {
                 &font::Text::unit(
                     &self.geng,
                     &**self.geng.default_font(),
-                    "code - kuviman",
+                    "code&graphics - kuviman",
                     Rgba::WHITE,
                     Rgba::BLACK,
                 )
@@ -304,7 +304,7 @@ impl State {
                 &font::Text::unit(
                     &self.geng,
                     &**self.geng.default_font(),
-                    "musix&sfx - BrainoidGames",
+                    "music&sfx - BrainoidGames",
                     Rgba::WHITE,
                     Rgba::BLACK,
                 )

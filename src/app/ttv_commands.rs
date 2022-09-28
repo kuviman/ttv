@@ -37,7 +37,7 @@ impl State {
                 if let Some(hat) = message_text.strip_prefix("!hat") {
                     let hat = hat.trim();
                     if self.assets.guy.hat.contains_key(hat) {
-                        let mut skin = self.find_skin(name);
+                        let mut skin = self.find_skin(name, false);
                         skin.hat = hat.to_owned();
                         self.db.set_skin(name, &skin);
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
@@ -65,7 +65,7 @@ impl State {
                         if let Some(name) = parts.next() {
                             if let Some(custom) = parts.next() {
                                 if self.assets.guy.custom.contains_key(custom) {
-                                    let mut skin = self.find_skin(name);
+                                    let mut skin = self.find_skin(name, false);
                                     skin.custom = Some(custom.to_owned());
                                     self.db.set_skin(name, &skin);
                                     if let Some(guy) =
@@ -81,7 +81,7 @@ impl State {
                 if let Some(face) = message_text.strip_prefix("!face") {
                     let face = face.trim();
                     if self.assets.guy.face.contains_key(face) {
-                        let mut skin = self.find_skin(name);
+                        let mut skin = self.find_skin(name, false);
                         skin.face = face.to_owned();
                         self.db.set_skin(name, &skin);
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
@@ -106,7 +106,7 @@ impl State {
                 if let Some(robe) = message_text.strip_prefix("!robe") {
                     let robe = robe.trim();
                     if self.assets.guy.robe.contains_key(robe) {
-                        let mut skin = self.find_skin(name);
+                        let mut skin = self.find_skin(name, false);
                         skin.robe = robe.to_owned();
                         self.db.set_skin(name, &skin);
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
@@ -131,7 +131,7 @@ impl State {
                 if let Some(beard) = message_text.strip_prefix("!beard") {
                     let beard = beard.trim();
                     if self.assets.guy.beard.contains_key(beard) {
-                        let mut skin = self.find_skin(name);
+                        let mut skin = self.find_skin(name, false);
                         skin.beard = beard.to_owned();
                         self.db.set_skin(name, &skin);
                         if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
@@ -178,7 +178,7 @@ impl State {
                         }
                     }
                     "!lvl" | "!level" => {
-                        let level = self.db.find_level(&name, true);
+                        let level = self.db.find_level(&name);
                         let hp = self.assets.config.initial_health
                             + level * self.assets.config.health_increase_per_level;
                         self.ttv_client
@@ -191,7 +191,7 @@ impl State {
                         self.start_raffle(RaffleMode::Ld);
                     }
                     "!skin" => {
-                        let skin = self.find_skin(name);
+                        let skin = self.find_skin(name, true);
                         self.ttv_client.reply(&skin.to_string(), &message);
                     }
                     "!skin random" => {
@@ -226,7 +226,7 @@ impl State {
                             color: Rgba::YELLOW,
                         });
                     }
-                    let level = self.db.find_level(&name, false) + 1;
+                    let level = self.db.find_level(&name) + 1;
                     self.db.set_level(&name, level);
                     let hp = self.assets.config.initial_health
                         + level * self.assets.config.health_increase_per_level;
