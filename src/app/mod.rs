@@ -398,7 +398,9 @@ impl geng::State for State {
                     } else if !self.process_battle {
                         for guy in &self.guys {
                             let current_level = self.db.find_level(&guy.name);
-                            self.db.set_level(&guy.name, current_level + 1);
+                            if !guy.should_never_win {
+                                self.db.set_level(&guy.name, current_level + 1);
+                            }
                         }
                         self.process_battle = true;
                     } else {
