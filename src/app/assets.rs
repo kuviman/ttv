@@ -5,8 +5,8 @@ use super::*;
 pub struct Constants {
     pub background: Rgba<f32>,
     pub circle: Rgba<f32>,
-    pub initial_health: usize,
-    pub health_increase_per_level: usize,
+    pub health_per_level: usize,
+    pub health_per_click: usize,
     pub volume: f64,
     pub guy_palette: Vec<Rgba<f32>>,
     pub background_palette: Vec<Rgba<f32>>,

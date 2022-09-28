@@ -41,7 +41,7 @@ impl Db {
         if let Some((level,)) = result {
             level as usize
         } else {
-            0
+            1
         }
     }
     pub fn set_level(&mut self, name: &str, level: usize) {

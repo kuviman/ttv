@@ -215,7 +215,7 @@ impl State {
                         &label_camera,
                         &draw_2d::Text::unit(
                             &**self.geng.default_font(),
-                            format!("{}/{}", guy.health, guy.max_health),
+                            format!("lvl 5 ({}/{})", guy.health, guy.max_health),
                             Rgba::BLACK,
                         )
                         .fit_into(hp_bar_aabb.extend_uniform(-0.1)),
@@ -289,7 +289,7 @@ impl State {
                 &font::Text::unit(
                     &self.geng,
                     &**self.geng.default_font(),
-                    "type !fight to join",
+                    format!("type !{} to join", self.raffle_keyword),
                     Rgba::WHITE,
                     Rgba::BLACK,
                 )

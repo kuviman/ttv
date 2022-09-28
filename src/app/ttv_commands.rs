@@ -153,42 +153,57 @@ impl State {
                         );
                     }
                 }
-                match message_text.trim() {
-                    "!fight" | "!join" => {
-                        if self.idle {
-                            self.ttv_client
-                                .reply("There is no raffle going on right now", &message);
-                        } else if !self.process_battle {
-                            if self.guys.iter().any(|guy| guy.name == name) {
-                                self.ttv_client.reply("No cheating allowed 🚫", &message);
-                            } else {
-                                if self.raffle_mode == RaffleMode::Ld
-                                    && self.db.find_game_link(name).is_none()
-                                {
-                                    self.ttv_client.reply("You should !submit first!", &message);
-                                } else {
-                                    self.spawn_guy(name.to_owned(), false);
-                                }
-                            }
+                if message_text.trim() == format!("!{}", self.raffle_keyword) {
+                    if self.idle {
+                        self.ttv_client
+                            .reply("There is no raffle going on right now", &message);
+                    } else if !self.process_battle {
+                        if self.guys.iter().any(|guy| guy.name == name) {
+                            self.ttv_client.reply("No cheating allowed 🚫", &message);
                         } else {
-                            self.ttv_client.reply(
-                                "You can't join into an ongoing fight, sorry Kappa",
-                                &message,
-                            );
+                            if self.raffle_mode == RaffleMode::Ld
+                                && self.db.find_game_link(name).is_none()
+                            {
+                                self.ttv_client.reply("You should !submit first!", &message);
+                            } else if self.raffle_mode == RaffleMode::Ld
+                                && self.db.game_played(name)
+                            {
+                                self.ttv_client
+                                    .reply("We have played your game already", &message);
+                            } else {
+                                self.spawn_guy(name.to_owned(), false);
+                            }
+                        }
+                    } else {
+                        self.ttv_client.reply(
+                            "You can't join into an ongoing fight, sorry Kappa",
+                            &message,
+                        );
+                    }
+                }
+                if let Some(keyword) = message_text.strip_prefix("!raffle") {
+                    if name == self.config.channel_login {
+                        let keyword = keyword.trim();
+                        if keyword.is_empty() {
+                            self.start_raffle(RaffleMode::Ld);
+                        } else if let Some(keyword) = keyword.strip_prefix("royale") {
+                            let keyword = keyword.trim();
+                            if !keyword.is_empty() {
+                                self.raffle_keyword = keyword.to_owned();
+                            }
+                            self.start_raffle(RaffleMode::Regular);
+                        } else {
+                            self.raffle_keyword = keyword.to_owned();
+                            self.start_raffle(RaffleMode::Ld);
                         }
                     }
+                }
+                match message_text.trim() {
                     "!lvl" | "!level" => {
                         let level = self.db.find_level(&name);
-                        let hp = self.assets.constants.initial_health
-                            + level * self.assets.constants.health_increase_per_level;
+                        let hp = level * self.assets.constants.health_per_level;
                         self.ttv_client
                             .reply(&format!("You are level {} ({} hp) ⭐", level, hp), &message);
-                    }
-                    "!raffle royale" if name == self.config.channel_login => {
-                        self.start_raffle(RaffleMode::Regular);
-                    }
-                    "!raffle royale ld" if name == self.config.channel_login => {
-                        self.start_raffle(RaffleMode::Ld);
                     }
                     "!skin" => {
                         let skin = self.find_skin(name, true);
@@ -207,8 +222,8 @@ impl State {
             ttv::Message::RewardRedemption { name, reward } => {
                 if reward == "Raffle Royale Level Up" {
                     if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
-                        guy.health += self.assets.constants.health_increase_per_level;
-                        guy.max_health += self.assets.constants.health_increase_per_level;
+                        guy.health += self.assets.constants.health_per_level;
+                        guy.max_health += self.assets.constants.health_per_level;
                         let mut effect = self.assets.levelup_sfx.effect();
                         effect.set_volume(self.assets.constants.volume);
                         effect.play();
@@ -228,8 +243,7 @@ impl State {
                     }
                     let level = self.db.find_level(&name) + 1;
                     self.db.set_level(&name, level);
-                    let hp = self.assets.constants.initial_health
-                        + level * self.assets.constants.health_increase_per_level;
+                    let hp = level * self.assets.constants.health_per_level;
                     self.ttv_client
                         .say(&format!("{} is now level {} ({} hp) ⭐", name, level, hp));
                 }

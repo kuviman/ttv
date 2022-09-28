@@ -80,6 +80,7 @@ pub struct State {
     background_entities: Vec<BackgroundEntity>,
     raffle_mode: RaffleMode,
     effects: Vec<Effect>,
+    raffle_keyword: String,
 }
 
 struct Effect {
@@ -174,6 +175,7 @@ impl State {
             .collect(),
             raffle_mode: RaffleMode::Regular,
             effects: vec![],
+            raffle_keyword: "fight".to_owned(),
         }
     }
 
@@ -332,8 +334,8 @@ impl geng::State for State {
                         if let Some(guy) =
                             iter.find(|guy| (guy.position - position).len() < State::GUY_RADIUS)
                         {
-                            guy.health += self.assets.constants.health_increase_per_level;
-                            guy.max_health += self.assets.constants.health_increase_per_level;
+                            guy.health += self.assets.constants.health_per_click;
+                            guy.max_health += self.assets.constants.health_per_click;
                             let mut effect = self.assets.levelup_sfx.effect();
                             effect.set_volume(self.assets.constants.volume);
                             effect.play();
@@ -393,6 +395,10 @@ impl geng::State for State {
                     if self.idle {
                         self.start_raffle(RaffleMode::Regular);
                     } else if !self.process_battle {
+                        for guy in &self.guys {
+                            let current_level = self.db.find_level(&guy.name);
+                            self.db.set_level(&guy.name, current_level + 1);
+                        }
                         self.process_battle = true;
                     } else {
                         self.process_battle = false;
