@@ -174,7 +174,7 @@ impl State {
             })
             .take(500)
             .collect(),
-            raffle_mode: RaffleMode::Regular,
+            raffle_mode: RaffleMode::Ld,
             effects: vec![],
             raffle_keyword: "fight".to_owned(),
         }
@@ -394,7 +394,7 @@ impl geng::State for State {
                 }
                 geng::Key::Space => {
                     if self.idle {
-                        self.start_raffle(RaffleMode::Regular);
+                        self.start_raffle(self.raffle_mode);
                     } else if !self.process_battle {
                         for guy in &self.guys {
                             let current_level = self.db.find_level(&guy.name);
