@@ -48,12 +48,14 @@ fn main() {
                 let geng = geng.clone();
                 move |assets| {
                     let mut assets = assets.unwrap();
+                    info!("Assets loaded");
                     assets.process();
                     let config: Config = serde_json::from_reader(
                         std::fs::File::open(static_path().join("config.json")).unwrap(),
                     )
                     .unwrap();
                     let ttv_client = ttv::Client::new(&config.channel_login, &config.bot_login);
+                    info!("Connected to ttv");
                     app::State::new(&geng, &Rc::new(assets), config, ttv_client, opt)
                 }
             },

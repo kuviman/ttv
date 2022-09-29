@@ -230,6 +230,11 @@ impl State {
                             });
                         }
                     }
+                    if let Some(names) = message_text.strip_prefix("!spawn") {
+                        for name in names.split_whitespace() {
+                            self.spawn_guy(name.to_owned(), true);
+                        }
+                    }
                 }
                 match message_text.trim() {
                     "!lvl" | "!level" => {

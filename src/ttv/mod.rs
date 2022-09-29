@@ -57,9 +57,11 @@ impl Client {
                     .unwrap(),
             ),
         ));
+        debug!("Connecting to ttv irc");
         let (mut incoming_messages, client) = tokio_runtime.block_on(async {
             TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(config)
         });
+        debug!("Connected to ttv irc");
 
         let (messages_sender, messages_receiver) = tokio::sync::mpsc::unbounded_channel();
 
