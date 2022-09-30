@@ -186,48 +186,31 @@ impl State {
                     ),
                 );
 
-                if false {
-                    let hp_text_aabb = AABB::point(pos + vec2(-1.5, 0.0)).extend_uniform(0.5);
-                    self.geng.draw_2d(
-                        framebuffer,
-                        &label_camera,
-                        &draw_2d::Quad::new(hp_text_aabb, Rgba::BLACK),
-                    );
-                    self.geng.draw_2d(
-                        framebuffer,
-                        &label_camera,
-                        &draw_2d::Text::unit(
-                            &**self.geng.default_font(),
-                            format!("{}/{}", guy.health, guy.max_health),
-                            Hsva::new(
-                                guy.health as f32 / guy.max_health as f32 / 3.0,
-                                1.0,
-                                1.0,
-                                1.0,
-                            )
-                            .into(),
-                        )
-                        .fit_into(hp_text_aabb.extend_uniform(-0.2)),
-                    );
-                } else {
-                    self.geng.draw_2d(
-                        framebuffer,
-                        &label_camera,
-                        &draw_2d::Text::unit(
-                            &**self.geng.default_font(),
-                            format!("{}/{}", guy.health, guy.max_health),
-                            Rgba::BLACK,
-                        )
-                        .fit_into(hp_bar_aabb.extend_uniform(-0.1)),
-                    );
-                }
+                self.geng.draw_2d(
+                    framebuffer,
+                    &label_camera,
+                    &draw_2d::Text::unit(
+                        &**self.geng.default_font(),
+                        format!("{}/{}", guy.health, guy.max_health),
+                        Rgba::BLACK,
+                    )
+                    .fit_into(hp_bar_aabb.extend_uniform(-0.1)),
+                );
 
                 let name_aabb = AABB::point(pos + vec2(0.0, 0.8)).extend_symmetric(vec2(2.0, 0.2));
                 self.geng.draw_2d(
                     framebuffer,
                     &label_camera,
-                    &draw_2d::Text::unit(&**self.geng.default_font(), &guy.name, Rgba::BLACK)
-                        .fit_into(name_aabb),
+                    &draw_2d::Text::unit(
+                        &**self.geng.default_font(),
+                        &guy.name,
+                        if guy.should_never_win {
+                            Rgba::new(0.0, 0.0, 0.0, 0.7)
+                        } else {
+                            Rgba::BLACK
+                        },
+                    )
+                    .fit_into(name_aabb),
                 );
             }
         }
