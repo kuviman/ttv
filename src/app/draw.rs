@@ -364,7 +364,7 @@ impl State {
                 }
                 self.winning_screen = true;
                 let mut sound_effect = self.assets.win_sfx.effect();
-                sound_effect.set_volume(self.assets.constants.volume);
+                sound_effect.set_volume(self.volume);
                 sound_effect.play();
             }
             self.geng.draw_2d(

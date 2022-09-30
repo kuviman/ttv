@@ -213,7 +213,7 @@ impl State {
                             guy.max_health += self.assets.constants.bless_hp;
 
                             let mut effect = self.assets.levelup_sfx.effect();
-                            effect.set_volume(self.assets.constants.volume);
+                            effect.set_volume(self.volume);
                             effect.play();
 
                             self.effects.push(Effect {
@@ -263,7 +263,7 @@ impl State {
                         guy.health += self.assets.constants.health_per_level;
                         guy.max_health += self.assets.constants.health_per_level;
                         let mut effect = self.assets.levelup_sfx.effect();
-                        effect.set_volume(self.assets.constants.volume);
+                        effect.set_volume(self.volume);
                         effect.play();
 
                         self.effects.push(Effect {

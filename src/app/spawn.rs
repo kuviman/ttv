@@ -37,7 +37,18 @@ impl State {
                 true
             })
             .min_by_key(|&pos| r32((pos - self.circle.center).len()))
-            .unwrap_or(self.camera.center),
+            .unwrap_or(
+                self.camera.center
+                    + vec2(
+                        global_rng().gen_range(
+                            0.0..self.camera.fov / 2.0
+                                * (self.framebuffer_size.x as f32 / self.framebuffer_size.y as f32)
+                                    .max(1.0),
+                        ),
+                        0.0,
+                    )
+                    .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
+            ),
             velocity: Vec2::ZERO,
             health,
             max_health: health,
@@ -50,7 +61,7 @@ impl State {
             .choose(&mut global_rng())
             .unwrap()
             .effect();
-        sound_effect.set_volume(self.assets.constants.volume);
+        sound_effect.set_volume(self.volume);
         sound_effect.play();
     }
 }
