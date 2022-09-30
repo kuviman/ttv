@@ -82,6 +82,7 @@ pub struct State {
     raffle_mode: RaffleMode,
     effects: Vec<Effect>,
     raffle_keyword: String,
+    volume: f64,
 }
 
 struct Effect {
@@ -128,6 +129,7 @@ impl State {
         battle_music.play();
 
         Self {
+            volume: assets.constants.volume,
             config,
             opt,
             idle: true,
@@ -218,7 +220,7 @@ impl State {
         self.next_attack = None;
         self.queued_attack = None;
         let mut sfx = self.assets.title_sfx.effect();
-        sfx.set_volume(self.assets.constants.volume * 3.0);
+        sfx.set_volume(self.volume * 3.0);
         sfx.play();
         self.raffle_mode = mode;
     }
@@ -237,6 +239,13 @@ impl State {
         skin
     }
     fn update_impl(&mut self, delta_time: f32) {
+        if self.geng.window().is_key_pressed(geng::Key::PageUp) {
+            self.volume = (self.volume + delta_time as f64).min(1.0);
+        }
+        if self.geng.window().is_key_pressed(geng::Key::PageDown) {
+            self.volume = (self.volume - delta_time as f64).max(0.0);
+        }
+
         for effect in &mut self.effects {
             effect.time += delta_time;
             if let Some(id) = effect.guy_id {
@@ -254,7 +263,7 @@ impl State {
             0.0
         } else {
             self.idle_fade = (self.idle_fade + delta_time / 2.5).min(1.0);
-            self.assets.constants.volume * if self.idle_fade == 1.0 { 1.0 } else { 0.0 }
+            self.volume * if self.idle_fade == 1.0 { 1.0 } else { 0.0 }
         };
         let start_music = was_idle && self.idle_fade == 1.0;
         if start_music {
@@ -338,7 +347,7 @@ impl geng::State for State {
                             guy.health += self.assets.constants.health_per_click;
                             guy.max_health += self.assets.constants.health_per_click;
                             let mut effect = self.assets.levelup_sfx.effect();
-                            effect.set_volume(self.assets.constants.volume);
+                            effect.set_volume(self.volume);
                             effect.play();
                             self.effects.push(Effect {
                                 pos: guy.position,
@@ -371,7 +380,7 @@ impl geng::State for State {
                                 });
 
                                 let mut sound_effect = self.assets.death_sfx.effect();
-                                sound_effect.set_volume(self.assets.constants.volume * 0.5);
+                                sound_effect.set_volume(self.volume * 0.5);
                                 sound_effect.play();
                             }
                         }
