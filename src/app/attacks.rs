@@ -102,11 +102,9 @@ impl State {
                 .iter()
                 .any(|current_attack| current_attack.attacker_id == new_attack.attacker_id)
             {
-                println!("Queued {:?}", new_attack);
                 self.queued_attack = Some(new_attack);
                 break;
             } else {
-                println!("Doing {:?}", new_attack);
                 self.attacks.push(new_attack);
             }
         }
