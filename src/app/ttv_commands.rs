@@ -29,7 +29,16 @@ impl State {
                                     .reply("You have already submitted a game tho 😕", &message);
                             } else {
                                 self.db.set_game_link(name, Some(url));
-                                self.ttv_client.reply("Submission successful 👌", &message);
+
+                                let mut text = "Submission successful 👌".to_owned();
+                                if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name)
+                                {
+                                    if guy.should_never_win {
+                                        guy.should_never_win = false;
+                                        text += " Your curse has been reversed";
+                                    }
+                                }
+                                self.ttv_client.reply(&text, &message);
                             }
                         }
                     }
@@ -161,19 +170,26 @@ impl State {
                         if self.guys.iter().any(|guy| guy.name == name) {
                             self.ttv_client.reply("No cheating allowed 🚫", &message);
                         } else {
+                            self.spawn_guy(name.to_owned(), false);
                             if self.raffle_mode == RaffleMode::Ld
                                 && self.db.find_game_link(name).is_none()
                             {
-                                self.ttv_client
-                                    .reply("You should !submit first! ⏳", &message);
-                            } else if self.raffle_mode == RaffleMode::Ld
-                                && self.db.game_played(name)
-                            {
-                                // self.ttv_client.reply("You shall not win", &message);
-                                self.spawn_guy(name.to_owned(), false);
-                            } else {
-                                self.spawn_guy(name.to_owned(), false);
+                                self.ttv_client.reply("You didn't !submit a game so you are cursed. Submit to reverse it ⏳", &message);
                             }
+
+                            // if self.raffle_mode == RaffleMode::Ld
+                            //     && self.db.find_game_link(name).is_none()
+                            // {
+                            //     self.ttv_client
+                            //         .reply("You should !submit first! ⏳", &message);
+                            // } else if self.raffle_mode == RaffleMode::Ld
+                            //     && self.db.game_played(name)
+                            // {
+                            //     // self.ttv_client.reply("You shall not win", &message);
+                            //     self.spawn_guy(name.to_owned(), false);
+                            // } else {
+                            //     self.spawn_guy(name.to_owned(), false);
+                            // }
                         }
                     } else {
                         self.ttv_client.reply(

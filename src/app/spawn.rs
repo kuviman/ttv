@@ -9,7 +9,8 @@ impl State {
         self.guys.insert(Guy {
             id,
             should_never_win: random
-                || (self.raffle_mode == RaffleMode::Ld && self.db.game_played(&name)),
+                || (self.raffle_mode == RaffleMode::Ld
+                    && (self.db.game_played(&name) || self.db.find_game_link(&name).is_none())),
             skin: self.find_skin(&name, !random),
             name,
             position: std::iter::from_fn(|| {
