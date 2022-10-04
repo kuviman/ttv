@@ -211,8 +211,10 @@ impl State {
             return;
         }
         if !self.opt.no_chat_spam {
-            self.ttv_client
-                .say("🧙‍♀️ Raffle Royale is about to begin! Type !fight to join! 🧙‍♂️");
+            self.ttv_client.say(&format!(
+                "🧙‍♀️ Raffle Royale is about to begin! Type !{} to join! 🧙‍♂️",
+                self.raffle_keyword
+            ));
         }
         self.idle = false;
         self.guys.clear();
