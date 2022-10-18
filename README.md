@@ -8,4 +8,6 @@ Right now only one thing, which is the
 
 Doing raffles on stream visualized as a battle royale
 
-![concept](concept.png)
+![raffle-royale](images/raffle-royale.gif)
+
+**TODO: instructions how to use this**.

@@ -270,6 +270,11 @@ impl State {
                             guy.skin = skin;
                         }
                     }
+                    "!hellopomo" => {
+                        let mut effect = self.assets.hello_pomo.effect();
+                        effect.set_volume(self.volume);
+                        effect.play();
+                    }
                     _ => {}
                 }
             }
