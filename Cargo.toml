@@ -1,3 +1,6 @@
+[workspace]
+members = ["server", "overlay", "interop"]
+
 [package]
 name = "raffle-royale"
 version = "0.1.0"

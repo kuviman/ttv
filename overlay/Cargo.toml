@@ -1,0 +1,14 @@
+[package]
+name = "overlay"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+interop = { path = "../interop" }
+geng = { git = "https://github.com/kuviman/geng" }
+serde = "1"
+url = "2"
+eyre = "0.6"
+toml = "0.5"

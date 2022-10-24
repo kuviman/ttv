@@ -1,2 +1,2 @@
 [build]
-jobs = 1 # For stream not to lag
+jobs = 2 # For stream not to lag

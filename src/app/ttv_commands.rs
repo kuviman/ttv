@@ -253,6 +253,11 @@ impl State {
                     }
                 }
                 match message_text.trim() {
+                    "!pomo" => {
+                        self.ttv_client.say(
+                            "For jam games check pomo's stream: https://twitch.tv/PomoTheDog 🎮",
+                        );
+                    }
                     "!lvl" | "!level" => {
                         let level = self.db.find_level(&name);
                         let hp = level * self.assets.constants.health_per_level;
