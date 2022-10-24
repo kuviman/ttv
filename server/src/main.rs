@@ -122,8 +122,8 @@ fn main() {
                 });
 
                 const SERVER_PORT: u16 = 8000;
-                // let addr = ([0, 0, 0, 0], SERVER_PORT).into();
-                let addr = ([127, 0, 0, 1], SERVER_PORT).into();
+                let addr = ([0, 0, 0, 0], SERVER_PORT).into();
+                // let addr = ([127, 0, 0, 1], SERVER_PORT).into();
                 let server = hyper::server::Server::bind(&addr).serve(make_service);
                 let addr = format!("http://{}/", addr);
                 eprintln!("Server running on {}", addr);
