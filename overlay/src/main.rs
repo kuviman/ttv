@@ -47,9 +47,17 @@ impl geng::State for Overlay {
     }
 }
 
+#[derive(clap::Parser)]
+struct Opt {
+    #[clap(long)]
+    connect: Option<String>,
+}
+
 fn main() {
     let geng = Geng::new("TTV");
-    let connection = geng::net::client::connect("ws://127.0.0.1:1001");
+    let opt: Opt = program_args::parse();
+    let connection =
+        geng::net::client::connect(opt.connect.as_deref().unwrap_or("ws://127.0.0.1:1001"));
     let assets = <Assets as geng::LoadAsset>::load(&geng, &static_path());
     geng::run(
         &geng,
