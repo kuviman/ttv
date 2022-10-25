@@ -1,5 +1,6 @@
 [workspace]
 members = ["server", "overlay", "interop"]
+resolver = "2"
 
 [package]
 name = "raffle-royale"
