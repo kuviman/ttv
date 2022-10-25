@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 interop = { path = "../interop" }
-geng = { git = "https://github.com/kuviman/geng" }
+geng = { git = "https://github.com/kuviman/geng", no-default-features = true }
 twitch-irc = { version = "4", features = ["with-serde"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 serde = "1"
