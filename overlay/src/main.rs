@@ -57,7 +57,7 @@ fn main() {
     let geng = Geng::new("TTV");
     let opt: Opt = program_args::parse();
     let connection =
-        geng::net::client::connect(opt.connect.as_deref().unwrap_or("ws://127.0.0.1:1001"));
+        geng::net::client::connect(opt.connect.as_deref().unwrap_or("ws://127.0.0.1:8001"));
     let assets = <Assets as geng::LoadAsset>::load(&geng, &static_path());
     geng::run(
         &geng,

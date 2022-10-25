@@ -90,7 +90,7 @@ fn main() {
     std::thread::spawn({
         let sender = sender.clone();
         || {
-            geng::net::Server::new(WsApp::new(sender), "127.0.0.1:1001").run();
+            geng::net::Server::new(WsApp::new(sender), "0.0.0.0:8001").run();
         }
     });
 
