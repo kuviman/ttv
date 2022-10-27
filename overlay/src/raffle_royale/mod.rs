@@ -10,6 +10,7 @@ mod ttv_commands;
 
 use skin::Skin;
 
+pub use assets::Assets;
 pub use assets::*;
 
 type Id = i32;

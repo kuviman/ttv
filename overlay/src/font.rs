@@ -3,7 +3,7 @@
 
 use super::*;
 
-const SHADER_SOURCE: &'static str = "
+pub const SHADER_SOURCE: &'static str = "
 varying vec2 v_uv;
 #ifdef VERTEX_SHADER
 attribute vec2 a_pos;
@@ -38,25 +38,32 @@ void main() {
 #endif
 ";
 
-pub struct Text<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> {
+pub struct Text<'a, F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> {
     geng: Geng,
-    program: ugli::Program,
+    program: &'a ugli::Program,
     inner: draw_2d::Text<F, T>,
     outline_color: Rgba<f32>,
 }
 
-impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Text<F, T> {
-    pub fn unit(geng: &Geng, font: F, text: T, color: Rgba<f32>, outline_color: Rgba<f32>) -> Self {
+impl<'a, F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Text<'a, F, T> {
+    pub fn unit(
+        geng: &Geng,
+        program: &'a ugli::Program,
+        font: F,
+        text: T,
+        color: Rgba<f32>,
+        outline_color: Rgba<f32>,
+    ) -> Self {
         Self {
             geng: geng.clone(),
-            program: geng.shader_lib().compile(SHADER_SOURCE).unwrap(), // TODO
+            program,
             inner: draw_2d::Text::unit(font, text, color),
             outline_color,
         }
     }
 }
 
-impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Text<F, T> {
+impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Text<'_, F, T> {
     fn bounding_quad(&self) -> Quad<f32> {
         self.inner.bounding_quad()
     }
@@ -65,7 +72,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Tex
     }
 }
 
-impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<F, T> {
+impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_, F, T> {
     fn draw_2d_transformed(
         &self,
         _geng: &Geng,
@@ -83,7 +90,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<F,
                 let framebuffer_size = framebuffer.size();
                 ugli::draw(
                     framebuffer,
-                    &self.program,
+                    self.program,
                     ugli::DrawMode::TriangleFan,
                     // TODO: don't create VBs each time
                     ugli::instanced(

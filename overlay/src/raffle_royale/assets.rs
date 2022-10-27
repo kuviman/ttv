@@ -139,7 +139,6 @@ pub struct Assets {
     pub levelup_front: Rc<Texture>,
     pub skull: Rc<Texture>,
     pub guy: GuyAssets,
-    pub hello_pomo: geng::Sound,
 }
 
 impl Assets {

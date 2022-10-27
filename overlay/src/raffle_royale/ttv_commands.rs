@@ -3,6 +3,7 @@ use super::*;
 impl RaffleRoyale {
     pub fn handle_message(&mut self, message: ServerMessage) {
         match message {
+            ServerMessage::RewardRedemption { name, reward } => {}
             ServerMessage::ChatMessage { name, message } => {
                 let name = name.as_str();
                 let message_text = message.as_str();
@@ -107,11 +108,6 @@ impl RaffleRoyale {
                     //         guy.skin = skin;
                     //     }
                     // }
-                    "!hellopomo" => {
-                        let mut effect = self.assets.hello_pomo.effect();
-                        effect.set_volume(self.volume);
-                        effect.play();
-                    }
                     _ => {}
                 }
             }

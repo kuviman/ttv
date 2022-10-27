@@ -37,7 +37,10 @@ impl Bot {
                     message: message_text.to_owned(),
                 });
             }
-            ttv::Message::RewardRedemption { name, reward } => {}
+            ttv::Message::RewardRedemption { name, reward } => {
+                self.sender
+                    .broadcast(ServerMessage::RewardRedemption { name, reward });
+            }
             _ => {}
         }
     }
