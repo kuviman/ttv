@@ -14,6 +14,7 @@ type Connection = geng::net::client::Connection<ServerMessage, ClientMessage>;
 #[asset(json)]
 pub struct Config {
     pub volume: f64,
+    pub fart_color: Rgba<f32>,
 }
 
 #[derive(geng::Assets)]
@@ -30,6 +31,11 @@ pub struct Assets {
     pub config: Config,
     pub crab: ugli::Texture,
     pub yeti: ugli::Texture,
+    pub farticle: ugli::Texture,
+    pub boom: ugli::Texture,
+    pub boom_sound: geng::Sound,
+    #[asset(range = "1..=3", path = "fart/*.wav")]
+    fart: Vec<geng::Sound>,
     hello: HelloSounds,
 }
 
@@ -38,24 +44,109 @@ struct Hello {
     name: String,
 }
 
+pub struct Farticle {
+    pub size: f32,
+    pub pos: Vec2<f32>,
+    pub vel: Vec2<f32>,
+    pub color: Rgba<f32>,
+    pub rot: f32,
+    pub w: f32,
+    pub t: f32,
+}
+
+impl Overlay {
+    pub fn update_farticles(&mut self, delta_time: f32) {
+        for farticle in &mut self.farticles {
+            farticle.t -= delta_time;
+            farticle.pos += farticle.vel * delta_time;
+            farticle.rot += farticle.w * delta_time;
+        }
+        self.farticles.retain(|farticle| farticle.t > 0.0);
+    }
+
+    pub fn draw_farticles(&self, framebuffer: &mut ugli::Framebuffer) {
+        for farticle in &self.farticles {
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::TexturedQuad::unit_colored(
+                    &self.assets.farticle,
+                    Rgba {
+                        a: farticle.color.a * farticle.t,
+                        ..farticle.color
+                    },
+                )
+                .transform(Mat3::rotate(farticle.rot))
+                .scale_uniform(farticle.size)
+                .translate(farticle.pos),
+            )
+        }
+    }
+}
+
+struct Boom {
+    time: f32,
+    pos: Vec2<f32>,
+}
+
 struct Overlay {
+    framebuffer_size: Vec2<f32>,
+    camera: geng::Camera2d,
     assets: Rc<Assets>,
     geng: Geng,
     connection: Connection,
     raffle_royale: RaffleRoyale,
     hello: Option<Hello>,
     font_program: ugli::Program,
+    farticles: Vec<Farticle>,
+    boom: Option<Boom>,
 }
 
 impl Overlay {
     pub fn new(geng: &Geng, connection: Connection, assets: &Rc<Assets>) -> Self {
-        Self {
+        let mut result = Self {
+            framebuffer_size: vec2(1.0, 1.0),
+            camera: geng::Camera2d {
+                center: Vec2::ZERO,
+                rotation: 0.0,
+                fov: 10.0,
+            },
             assets: assets.clone(),
             geng: geng.clone(),
             connection,
             raffle_royale: RaffleRoyale::new(&geng, &assets.raffle_royale),
             hello: None,
             font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
+            farticles: vec![],
+            boom: None,
+        };
+        result
+    }
+    fn fart(&mut self) {
+        let mut effect = self.assets.fart.choose(&mut global_rng()).unwrap().effect();
+        effect.set_volume(self.assets.config.volume);
+        effect.play();
+        let x = global_rng().gen_range(-1.0..1.0) * self.camera.fov / 2.0 * self.framebuffer_size.x
+            / self.framebuffer_size.y;
+        let y = -self.camera.fov / 2.0;
+        for _ in 0..20 {
+            self.farticles.push(Farticle {
+                size: 0.5,
+                pos: vec2(x, y)
+                    + vec2(
+                        global_rng().gen_range(-1.0..1.0),
+                        global_rng().gen_range(-1.0..1.0),
+                    ) * 0.5,
+                vel: vec2(0.0, 2.0)
+                    + vec2(
+                        global_rng().gen_range(-1.0..1.0),
+                        global_rng().gen_range(-1.0..1.0),
+                    ) * 0.5,
+                color: self.assets.config.fart_color,
+                rot: global_rng().gen_range(0.0..2.0 * f32::PI),
+                w: global_rng().gen_range(-1.0..1.0) * 3.0,
+                t: 1.0,
+            });
         }
     }
 }
@@ -65,14 +156,22 @@ impl geng::State for Overlay {
         self.raffle_royale.update(delta_time);
         let delta_time = delta_time as f32;
 
+        self.update_farticles(delta_time);
+
         if let Some(hello) = &mut self.hello {
             hello.time += delta_time / 2.0;
             if hello.time > 2.0 {
                 self.hello = None;
             }
         }
+        if let Some(boom) = &mut self.boom {
+            boom.time += delta_time;
+            if boom.time > 1.0 {
+                self.boom = None;
+            }
+        }
 
-        for message in self.connection.new_messages() {
+        for message in self.connection.new_messages().collect::<Vec<_>>() {
             match &message {
                 ServerMessage::ChatMessage { name, message } => match message.trim() {
                     "!hellopomo" => {
@@ -84,6 +183,24 @@ impl geng::State for Overlay {
                         let mut effect = self.assets.hello.badcop.effect();
                         effect.set_volume(self.assets.config.volume);
                         effect.play();
+                    }
+                    "!boom" => {
+                        let mut effect = self.assets.boom_sound.effect();
+                        effect.set_volume(self.assets.config.volume);
+                        effect.play();
+                        self.boom = Some(Boom {
+                            time: 0.0,
+                            pos: vec2(
+                                global_rng().gen_range(-1.0..1.0) * self.framebuffer_size.x
+                                    / self.framebuffer_size.y,
+                                global_rng().gen_range(-1.0..1.0),
+                            ) * self.camera.fov
+                                / 2.0
+                                * 0.75,
+                        });
+                    }
+                    "!fart" => {
+                        self.fart();
                     }
                     _ => {}
                 },
@@ -112,20 +229,17 @@ impl geng::State for Overlay {
         }
     }
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
-        ugli::clear(framebuffer, Some(Rgba::TRANSPARENT_BLACK), None, None);
+        self.framebuffer_size = framebuffer.size().map(|x| x as f32);
+        ugli::clear(framebuffer, Some(Rgba::TRANSPARENT_WHITE), None, None);
         self.raffle_royale.draw(framebuffer);
-        let camera = geng::Camera2d {
-            center: Vec2::ZERO,
-            rotation: 0.0,
-            fov: 10.0,
-        };
         if let Some(hello) = &self.hello {
-            let x =
-                camera.fov / 2.0 * framebuffer.size().x as f32 / framebuffer.size().y as f32 - 2.0;
-            let y = -camera.fov / 2.0 + 1.0;
+            let x = self.camera.fov / 2.0 * framebuffer.size().x as f32
+                / framebuffer.size().y as f32
+                - 2.0;
+            let y = -self.camera.fov / 2.0 + 1.0;
             self.geng.draw_2d(
                 framebuffer,
-                &camera,
+                &self.camera,
                 &draw_2d::TexturedQuad::new(
                     AABB::point(vec2(x, y - 2.0 * (hello.time - 1.0).abs().sqr()))
                         .extend_uniform(1.0),
@@ -134,7 +248,7 @@ impl geng::State for Overlay {
             );
             self.geng.draw_2d(
                 framebuffer,
-                &camera,
+                &self.camera,
                 &font::Text::unit(
                     &self.geng,
                     &self.font_program,
@@ -147,6 +261,23 @@ impl geng::State for Overlay {
                 .translate(vec2(x, y - 0.5)),
             );
         }
+        if let Some(boom) = &self.boom {
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::TexturedQuad::colored(
+                    AABB::point(boom.pos).extend_symmetric(
+                        vec2(
+                            self.assets.boom.size().x as f32 / self.assets.boom.size().y as f32,
+                            1.0,
+                        ) * (boom.time + 1.0),
+                    ),
+                    &self.assets.boom,
+                    Rgba::new(1.0, 1.0, 1.0, 1.0 - boom.time),
+                ),
+            );
+        }
+        self.draw_farticles(framebuffer);
     }
     fn handle_event(&mut self, event: geng::Event) {
         self.raffle_royale.handle_event(event);
