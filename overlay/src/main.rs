@@ -37,11 +37,17 @@ pub struct Assets {
     #[asset(range = "1..=3", path = "fart/*.wav")]
     fart: Vec<geng::Sound>,
     hello: HelloSounds,
+    #[asset(path = "JumpScare1.wav")]
+    jumpscare: geng::Sound,
 }
 
 struct Hello {
     time: f32,
     name: String,
+}
+
+struct Jumpscare {
+    time: f32,
 }
 
 pub struct Farticle {
@@ -100,11 +106,13 @@ struct Overlay {
     font_program: ugli::Program,
     farticles: Vec<Farticle>,
     boom: Option<Boom>,
+    jumpscare: Option<Jumpscare>,
 }
 
 impl Overlay {
     pub fn new(geng: &Geng, connection: Connection, assets: &Rc<Assets>) -> Self {
         let mut result = Self {
+            jumpscare: None,
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
                 center: Vec2::ZERO,
@@ -170,6 +178,12 @@ impl geng::State for Overlay {
                 self.boom = None;
             }
         }
+        if let Some(jumpscare) = &mut self.jumpscare {
+            jumpscare.time += delta_time;
+            if jumpscare.time > 1.0 {
+                self.jumpscare = None;
+            }
+        }
 
         for message in self.connection.new_messages().collect::<Vec<_>>() {
             match &message {
@@ -198,6 +212,12 @@ impl geng::State for Overlay {
                                 / 2.0
                                 * 0.75,
                         });
+                    }
+                    "!jumpscare" => {
+                        let mut effect = self.assets.jumpscare.effect();
+                        effect.set_volume(self.assets.config.volume);
+                        effect.play();
+                        self.jumpscare = Some(Jumpscare { time: 0.0 });
                     }
                     "!fart" => {
                         self.fart();
@@ -274,6 +294,16 @@ impl geng::State for Overlay {
                     ),
                     &self.assets.boom,
                     Rgba::new(1.0, 1.0, 1.0, 1.0 - boom.time),
+                ),
+            );
+        }
+        if let Some(_) = &self.jumpscare {
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::TexturedQuad::new(
+                    AABB::point(Vec2::ZERO).extend_uniform(5.0),
+                    &self.assets.yeti,
                 ),
             );
         }

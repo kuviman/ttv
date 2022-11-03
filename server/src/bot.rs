@@ -30,6 +30,7 @@ impl Bot {
                 info!("{}", message_text);
                 match message_text.trim() {
                     "!gnbadcop" => self.ttv_client.say("Good Night badcop_ rincsDance"),
+                    "🦀" => self.ttv_client.say("🦀✅🦀✅🦀✅🦀✅🦀✅🦀✅🦀"),
                     _ => {}
                 }
                 self.sender.broadcast(ServerMessage::ChatMessage {
