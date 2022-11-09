@@ -140,6 +140,7 @@ pub struct Assets {
     pub skull: Rc<Texture>,
     pub guy: GuyAssets,
     pub hello_pomo: geng::Sound,
+    pub hello_pgorley: geng::Sound,
 }
 
 impl Assets {

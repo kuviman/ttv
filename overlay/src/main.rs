@@ -193,6 +193,11 @@ impl geng::State for Overlay {
                         effect.set_volume(self.assets.config.volume);
                         effect.play();
                     }
+                    "!hellopgorley" => {
+                        let mut effect = self.assets.hello.pgorley.effect();
+                        effect.set_volume(self.assets.config.volume);
+                        effect.play();
+                    }
                     "!hellobadcop" => {
                         let mut effect = self.assets.hello.badcop.effect();
                         effect.set_volume(self.assets.config.volume);

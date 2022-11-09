@@ -280,6 +280,11 @@ impl State {
                         effect.set_volume(self.volume);
                         effect.play();
                     }
+                    "!hellopgorley" => {
+                        let mut effect = self.assets.hello_pgorley.effect();
+                        effect.set_volume(self.volume);
+                        effect.play();
+                    }
                     _ => {}
                 }
             }
