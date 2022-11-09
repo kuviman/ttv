@@ -1,6 +1,6 @@
 use super::*;
 
-impl RaffleRoyale {
+impl State {
     pub fn draw_impl(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         // ugli::clear(
@@ -103,7 +103,7 @@ impl RaffleRoyale {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::new(
-                        AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.custom[custom],
                     ),
                 );
@@ -112,7 +112,7 @@ impl RaffleRoyale {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::new(
-                        AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.face[&guy.skin.face],
                     ),
                 );
@@ -120,7 +120,7 @@ impl RaffleRoyale {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::colored(
-                        AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.hat[&guy.skin.hat],
                         guy.skin.outfit_color,
                     ),
@@ -129,7 +129,7 @@ impl RaffleRoyale {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::colored(
-                        AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.robe[&guy.skin.robe],
                         guy.skin.outfit_color,
                     ),
@@ -138,7 +138,7 @@ impl RaffleRoyale {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::colored(
-                        AABB::point(guy.position).extend_uniform(RaffleRoyale::GUY_RADIUS),
+                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.beard[&guy.skin.beard],
                         self.assets.constants.beard_color,
                     ),
@@ -147,7 +147,7 @@ impl RaffleRoyale {
 
             if let Some(pos) = self.camera.world_to_screen(
                 self.framebuffer_size.map(|x| x as f32),
-                guy.position + vec2(0.0, RaffleRoyale::GUY_RADIUS),
+                guy.position + vec2(0.0, State::GUY_RADIUS),
             ) {
                 let label_camera = if true {
                     self.camera.clone()

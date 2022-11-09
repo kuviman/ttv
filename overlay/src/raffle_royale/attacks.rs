@@ -1,6 +1,6 @@
 use super::*;
 
-impl RaffleRoyale {
+impl State {
     pub fn process_attacks(&mut self, delta_time: f32) {
         if !self.process_battle {
             self.feed = None;

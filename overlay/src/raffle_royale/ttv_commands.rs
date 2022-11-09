@@ -1,6 +1,6 @@
 use super::*;
 
-impl RaffleRoyale {
+impl State {
     pub fn handle_message(&mut self, message: ServerMessage) {
         match message {
             ServerMessage::RewardRedemption { name, reward } => {}

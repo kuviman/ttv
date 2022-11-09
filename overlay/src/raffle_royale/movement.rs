@@ -1,6 +1,6 @@
 use super::*;
 
-impl RaffleRoyale {
+impl State {
     pub fn process_movement(&mut self, delta_time: f32) {
         let Circle { center, .. } = match self.find_circle() {
             Some(circle) => circle,
@@ -12,9 +12,9 @@ impl RaffleRoyale {
         for id in &ids {
             let mut guy = self.guys.remove(id).unwrap();
             let target_velocity =
-                (center - guy.position).normalize_or_zero() * RaffleRoyale::GUY_MAX_SPEED;
-            guy.velocity += (target_velocity - guy.velocity)
-                .clamp_len(..=RaffleRoyale::GUY_ACCELERATION * delta_time);
+                (center - guy.position).normalize_or_zero() * State::GUY_MAX_SPEED;
+            guy.velocity +=
+                (target_velocity - guy.velocity).clamp_len(..=State::GUY_ACCELERATION * delta_time);
             self.guys.insert(guy);
         }
 
@@ -30,9 +30,9 @@ impl RaffleRoyale {
                 for other in &self.guys {
                     let delta_pos = guy.position - other.position;
                     let len = delta_pos.len();
-                    if len < RaffleRoyale::MIN_DISTANCE {
+                    if len < State::MIN_DISTANCE {
                         let v = delta_pos.normalize_or_zero();
-                        moves.push((guy.id, v * (RaffleRoyale::MIN_DISTANCE - len) / 2.0));
+                        moves.push((guy.id, v * (State::MIN_DISTANCE - len) / 2.0));
                         guy.velocity -= v * Vec2::dot(guy.velocity, v);
                     }
                 }

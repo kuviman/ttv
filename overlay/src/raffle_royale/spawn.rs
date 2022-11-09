@@ -1,6 +1,6 @@
 use super::*;
 
-impl RaffleRoyale {
+impl State {
     pub fn spawn_guy(&mut self, name: String, random: bool) {
         let level = 1; // self.db.find_level(&name);
         let health = level * self.assets.constants.health_per_level;
@@ -31,7 +31,7 @@ impl RaffleRoyale {
             .take(50)
             .filter(|&pos| {
                 for guy in &self.guys {
-                    if (guy.position - pos).len() < RaffleRoyale::MIN_DISTANCE {
+                    if (guy.position - pos).len() < State::MIN_DISTANCE {
                         return false;
                     }
                 }

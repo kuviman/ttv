@@ -56,7 +56,7 @@ enum RaffleMode {
     Ld,
 }
 
-pub struct RaffleRoyale {
+pub struct State {
     // opt: Opt,
     geng: Geng,
     assets: Rc<Assets>,
@@ -102,7 +102,7 @@ struct Effect {
     color: Rgba<f32>,
 }
 
-impl Drop for RaffleRoyale {
+impl Drop for State {
     fn drop(&mut self) {
         // if !self.opt.no_chat_spam {
         //     self.ttv_client.say("Going to sleep 💤");
@@ -110,7 +110,7 @@ impl Drop for RaffleRoyale {
     }
 }
 
-impl RaffleRoyale {
+impl State {
     const GUY_RADIUS: f32 = 1.0;
     const MIN_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
@@ -334,106 +334,116 @@ impl RaffleRoyale {
     }
 }
 
-impl geng::State for RaffleRoyale {
+impl Feature for State {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.draw_impl(framebuffer);
     }
-    fn handle_event(&mut self, event: geng::Event) {
-        match event {
-            geng::Event::MouseDown { position, button } => {
-                let position = self.camera.screen_to_world(
-                    self.framebuffer_size.map(|x| x as f32),
-                    position.map(|x| x as f32),
-                );
-                match button {
-                    geng::MouseButton::Left => {
-                        let mut iter = self.guys.iter_mut();
-                        if let Some(guy) = iter
-                            .find(|guy| (guy.position - position).len() < RaffleRoyale::GUY_RADIUS)
-                        {
-                            guy.health += self.assets.constants.health_per_click;
-                            guy.max_health += self.assets.constants.health_per_click;
-                            let mut effect = self.assets.levelup_sfx.effect();
-                            effect.set_volume(self.volume);
-                            effect.play();
-                            self.effects.push(Effect {
-                                pos: guy.position,
-                                scale_up: 0.2,
-                                offset: 1.0,
-                                size: 1.0,
-                                time: 0.0,
-                                max_time: 1.35,
-                                back_texture: Some(self.assets.levelup.clone()),
-                                front_texture: Some(self.assets.levelup_front.clone()),
-                                guy_id: Some(guy.id),
-                                color: Rgba::YELLOW,
-                            });
-                        }
-                    }
-                    geng::MouseButton::Right => {
-                        for guy in &self.guys {
-                            if (guy.position - position).len() < RaffleRoyale::GUY_RADIUS {
-                                self.effects.push(Effect {
-                                    pos: guy.position,
-                                    scale_up: 1.0,
-                                    offset: 0.3,
-                                    size: 1.0,
-                                    time: 0.0,
-                                    max_time: 0.7,
-                                    back_texture: None,
-                                    front_texture: Some(self.assets.skull.clone()),
-                                    guy_id: Some(guy.id),
-                                    color: Rgba::BLACK,
-                                });
+    // fn handle_event(&mut self, event: geng::Event) {
+    //     match event {
+    //         geng::Event::MouseDown { position, button } => {
+    //             let position = self.camera.screen_to_world(
+    //                 self.framebuffer_size.map(|x| x as f32),
+    //                 position.map(|x| x as f32),
+    //             );
+    //             match button {
+    //                 geng::MouseButton::Left => {
+    //                     let mut iter = self.guys.iter_mut();
+    //                     if let Some(guy) =
+    //                         iter.find(|guy| (guy.position - position).len() < State::GUY_RADIUS)
+    //                     {
+    //                         guy.health += self.assets.constants.health_per_click;
+    //                         guy.max_health += self.assets.constants.health_per_click;
+    //                         let mut effect = self.assets.levelup_sfx.effect();
+    //                         effect.set_volume(self.volume);
+    //                         effect.play();
+    //                         self.effects.push(Effect {
+    //                             pos: guy.position,
+    //                             scale_up: 0.2,
+    //                             offset: 1.0,
+    //                             size: 1.0,
+    //                             time: 0.0,
+    //                             max_time: 1.35,
+    //                             back_texture: Some(self.assets.levelup.clone()),
+    //                             front_texture: Some(self.assets.levelup_front.clone()),
+    //                             guy_id: Some(guy.id),
+    //                             color: Rgba::YELLOW,
+    //                         });
+    //                     }
+    //                 }
+    //                 geng::MouseButton::Right => {
+    //                     for guy in &self.guys {
+    //                         if (guy.position - position).len() < State::GUY_RADIUS {
+    //                             self.effects.push(Effect {
+    //                                 pos: guy.position,
+    //                                 scale_up: 1.0,
+    //                                 offset: 0.3,
+    //                                 size: 1.0,
+    //                                 time: 0.0,
+    //                                 max_time: 0.7,
+    //                                 back_texture: None,
+    //                                 front_texture: Some(self.assets.skull.clone()),
+    //                                 guy_id: Some(guy.id),
+    //                                 color: Rgba::BLACK,
+    //                             });
 
-                                let mut sound_effect = self.assets.death_sfx.effect();
-                                sound_effect.set_volume(self.volume * 0.5);
-                                sound_effect.play();
-                            }
-                        }
-                        self.guys.retain(|guy| {
-                            (guy.position - position).len() > RaffleRoyale::GUY_RADIUS
-                        });
-                    }
-                    _ => {}
-                }
-            }
-            geng::Event::KeyDown { key } => match key {
-                geng::Key::S => {
-                    self.spawn_guy(
-                        global_rng()
-                            .sample_iter(rand::distributions::Alphanumeric)
-                            .map(|c| c as char)
-                            .take(global_rng().gen_range(5..=15))
-                            .collect(),
-                        true,
-                    );
-                }
-                geng::Key::Space => {
-                    if self.idle {
-                        self.start_raffle(self.raffle_mode);
-                    } else if !self.process_battle {
-                        for guy in &self.guys {
-                            let current_level = 1; // self.db.find_level(&guy.name);
-                            if !guy.should_never_win {
-                                // self.db.set_level(&guy.name, current_level + 1);
-                            }
-                        }
-                        self.process_battle = true;
-                    } else {
-                        self.process_battle = false;
-                        self.idle = true;
-                    }
-                }
-                geng::Key::F11 => {
-                    self.geng.window().toggle_fullscreen();
-                }
-                _ => {}
-            },
-            _ => {}
-        }
+    //                             let mut sound_effect = self.assets.death_sfx.effect();
+    //                             sound_effect.set_volume(self.volume * 0.5);
+    //                             sound_effect.play();
+    //                         }
+    //                     }
+    //                     self.guys
+    //                         .retain(|guy| (guy.position - position).len() > State::GUY_RADIUS);
+    //                 }
+    //                 _ => {}
+    //             }
+    //         }
+    //         geng::Event::KeyDown { key } => match key {
+    //             geng::Key::S => {
+    //                 self.spawn_guy(
+    //                     global_rng()
+    //                         .sample_iter(rand::distributions::Alphanumeric)
+    //                         .map(|c| c as char)
+    //                         .take(global_rng().gen_range(5..=15))
+    //                         .collect(),
+    //                     true,
+    //                 );
+    //             }
+    //             geng::Key::Space => {
+    //                 if self.idle {
+    //                     self.start_raffle(self.raffle_mode);
+    //                 } else if !self.process_battle {
+    //                     for guy in &self.guys {
+    //                         let current_level = 1; // self.db.find_level(&guy.name);
+    //                         if !guy.should_never_win {
+    //                             // self.db.set_level(&guy.name, current_level + 1);
+    //                         }
+    //                     }
+    //                     self.process_battle = true;
+    //                 } else {
+    //                     self.process_battle = false;
+    //                     self.idle = true;
+    //                 }
+    //             }
+    //             geng::Key::F11 => {
+    //                 self.geng.window().toggle_fullscreen();
+    //             }
+    //             _ => {}
+    //         },
+    //         _ => {}
+    //     }
+    // }
+    fn update(&mut self, delta_time: f32) {
+        self.update_impl(delta_time);
     }
-    fn update(&mut self, delta_time: f64) {
-        self.update_impl(delta_time as f32);
+
+    fn load(geng: Geng, assets_path: std::path::PathBuf) -> Pin<Box<dyn Future<Output = Self>>>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn handle(&mut self, message: &ServerMessage) {
+        todo!()
     }
 }
