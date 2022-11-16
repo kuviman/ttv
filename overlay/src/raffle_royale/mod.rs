@@ -274,8 +274,8 @@ impl State {
         };
         let start_music = was_idle && self.idle_fade == 1.0;
         if start_music {
-            self.lobby_music.pause();
-            self.battle_music.pause();
+            self.lobby_music.stop();
+            self.battle_music.stop();
             self.lobby_music = self.assets.lobby_music.effect();
             self.battle_music = self.assets.battle_music.effect();
         }

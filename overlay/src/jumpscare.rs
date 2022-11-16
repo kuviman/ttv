@@ -33,7 +33,7 @@ impl Feature for State {
     }
 
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
-        if self.time < 0.0 {
+        if self.time <= 0.0 {
             return;
         }
         self.geng.draw_2d(
