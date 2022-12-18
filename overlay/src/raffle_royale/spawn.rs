@@ -1,7 +1,7 @@
 use super::*;
 
 impl State {
-    pub fn spawn_guy(&mut self, name: String, random: bool) {
+    pub async fn spawn_guy(&mut self, name: String, random: bool) {
         let level = 1; // self.db.find_level(&name);
         let health = level * self.assets.constants.health_per_level;
         let id = self.next_id;
@@ -11,7 +11,7 @@ impl State {
             should_never_win: random,
             // || (self.raffle_mode == RaffleMode::Ld
             //     && (self.db.game_played(&name) || self.db.find_game_link(&name).is_none())),
-            skin: self.find_skin(&name, !random),
+            skin: self.find_skin(&name, !random).await,
             name,
             position: std::iter::from_fn(|| {
                 Some(

@@ -13,16 +13,66 @@ mod jumpscare;
 mod raffle_royale;
 mod sound_commands;
 
-type Connection = geng::net::client::Connection<ServerMessage, ClientMessage>;
-
 #[async_trait(?Send)]
 trait Feature: 'static {
-    async fn load(geng: Geng, path: std::path::PathBuf) -> Self
+    async fn load(geng: Geng, path: std::path::PathBuf, connection: Connection) -> Self
     where
         Self: Sized;
     async fn update(&mut self, delta_time: f32);
+    async fn handle_event(&mut self, event: geng::Event) {}
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer);
     async fn handle(&mut self, message: &ServerMessage);
+}
+
+#[derive(Clone)]
+pub struct Connection {
+    inner: Arc<Mutex<geng::net::client::Connection<ServerMessage, ClientMessage>>>,
+    waiting_for_replies:
+        Arc<Mutex<HashMap<String, futures::channel::oneshot::Sender<ServerMessage>>>>,
+}
+
+impl Connection {
+    fn new(connection: geng::net::client::Connection<ServerMessage, ClientMessage>) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(connection)),
+            waiting_for_replies: default(),
+        }
+    }
+    fn say(&self, text: &str) {
+        self.inner.lock().unwrap().send(ClientMessage::Say {
+            text: text.to_owned(),
+        });
+    }
+    fn reply(&self, text: &str, to: &str) {
+        self.say(text);
+    }
+    async fn get_key_value<T: serde::de::DeserializeOwned>(&self, key: &str) -> Option<T> {
+        let request_id: String = global_rng()
+            .sample_iter(rand::distributions::Alphanumeric)
+            .map(|c| c as char)
+            .take(64)
+            .collect();
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        self.waiting_for_replies
+            .lock()
+            .unwrap()
+            .insert(request_id.clone(), sender);
+        self.inner.lock().unwrap().send(ClientMessage::GetKeyValue {
+            request_id: request_id.clone(),
+            key: format!("{key}.json"),
+        });
+        let ServerMessage::KeyValue { request_id: response_request_id, value } = receiver.await.unwrap() else {
+            unreachable!()
+        };
+        assert!(request_id == response_request_id);
+        value.map(|s| serde_json::from_str(&s).unwrap())
+    }
+    fn set_key_value<T: Serialize>(&self, key: &str, value: &T) {
+        self.inner.lock().unwrap().send(ClientMessage::SetKeyValue {
+            key: format!("{key}.json"),
+            value: serde_json::to_string(value).unwrap(),
+        });
+    }
 }
 
 struct SyncFeature {
@@ -37,6 +87,19 @@ impl SyncFeature {
             inner: Some(feature),
             future: None,
             messages: default(),
+        }
+    }
+    fn handle_event(&mut self, event: geng::Event) {
+        if let Some(mut inner) = self.inner.take() {
+            self.future = Some(
+                async move {
+                    inner.handle_event(event).await;
+                    inner
+                }
+                .boxed_local(),
+            );
+        } else {
+            // TODO
         }
     }
     fn update(&mut self, delta_time: f32) {
@@ -87,16 +150,12 @@ impl SyncFeature {
 
 struct Overlay {
     features: Vec<SyncFeature>,
-    connection: Option<Connection>,
+    connection: Connection,
     receiver: std::sync::mpsc::Receiver<ServerMessage>,
 }
 
 impl Overlay {
-    pub fn new(
-        geng: &Geng,
-        connection: Option<Connection>,
-        features: Vec<Box<dyn Feature>>,
-    ) -> Self {
+    pub fn new(geng: &Geng, connection: Connection, features: Vec<Box<dyn Feature>>) -> Self {
         let (sender, receiver) = std::sync::mpsc::channel();
         #[cfg(not(target_arch = "wasm32"))]
         std::thread::spawn(move || loop {
@@ -132,15 +191,24 @@ impl geng::State for Overlay {
             feature.update(delta_time as f32);
         }
         let mut new_messages = Vec::new();
-        if let Some(connection) = &mut self.connection {
-            for message in connection.new_messages() {
-                new_messages.push(message);
-            }
+        for message in self.connection.inner.lock().unwrap().new_messages() {
+            new_messages.push(message);
         }
         for message in self.receiver.try_iter() {
             new_messages.push(message);
         }
         for message in new_messages {
+            if let ServerMessage::KeyValue { request_id, value } = &message {
+                self.connection
+                    .waiting_for_replies
+                    .lock()
+                    .unwrap()
+                    .remove(request_id)
+                    .unwrap()
+                    .send(message)
+                    .unwrap();
+                continue;
+            }
             info!("{:?}", message);
             for feature in &mut self.features {
                 feature.handle(&message);
@@ -148,12 +216,18 @@ impl geng::State for Overlay {
         }
     }
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
+        if self.features.iter().any(|feature| feature.inner.is_none()) {
+            return;
+        }
         ugli::clear(framebuffer, Some(Rgba::TRANSPARENT_WHITE), None, None);
         for feature in &mut self.features {
             feature.draw(framebuffer);
         }
     }
     fn handle_event(&mut self, event: geng::Event) {
+        for feature in &mut self.features {
+            feature.handle_event(event.clone());
+        }
         // TODO: raffle_royale.handle_event(event)
     }
 }
@@ -162,6 +236,16 @@ impl geng::State for Overlay {
 struct Opt {
     #[clap(long)]
     connect: Option<String>,
+}
+
+macro_rules! load_features {
+    (geng: $geng:expr, connection: $connection:expr, $($feature:ident,)*) => {{
+        let geng = $geng;
+        let connection = $connection;
+        vec![
+            $(load_feature::<$feature::State>(&geng, static_path().join(stringify!($feature)), connection.clone()),)*
+        ]
+    }}
 }
 
 fn main() {
@@ -178,39 +262,41 @@ fn main() {
             .as_deref()
             .map(|path| geng::net::client::connect(path)),
     );
-    fn load_feature<T: Feature>(
-        geng: &Geng,
-        path: std::path::PathBuf,
-    ) -> Pin<Box<dyn Future<Output = Box<dyn Feature>>>> {
-        T::load(geng.clone(), path)
-            .map(|feature| Box::new(feature) as Box<dyn Feature>)
-            .boxed_local()
-    }
-    macro_rules! load_features {
-        ($($feature:ident,)*) => {
-            vec![
-                $(load_feature::<$feature::State>(&geng, static_path().join(stringify!($feature))),)*
-            ]
+
+    let future = connection.then({
+        let geng = geng.clone();
+        move |connection| async move {
+            let connection = Connection::new(connection.expect("Need a connection"));
+
+            fn load_feature<T: Feature>(
+                geng: &Geng,
+                path: std::path::PathBuf,
+                connection: Connection,
+            ) -> Pin<Box<dyn Future<Output = Box<dyn Feature>>>> {
+                T::load(geng.clone(), path, connection)
+                    .map(|feature| Box::new(feature) as Box<dyn Feature>)
+                    .boxed_local()
+            }
+
+            let features = future::join_all(load_features![
+                geng: geng,
+                connection: connection.clone(),
+                raffle_royale,
+                boom,
+                fart,
+                hello,
+                jumpscare,
+                sound_commands,
+            ])
+            .await;
+            (connection, features)
         }
-    }
-    let features = future::join_all(load_features![
-        // TODO raffle_royale,
-        boom,
-        fart,
-        hello,
-        jumpscare,
-        sound_commands,
-    ]);
+    });
     geng::run(
         &geng,
-        geng::LoadingScreen::new(
-            &geng,
-            geng::EmptyLoadingScreen,
-            future::join(connection, features),
-            {
-                let geng = geng.clone();
-                move |(connection, features)| Overlay::new(&geng, connection, features)
-            },
-        ),
+        geng::LoadingScreen::new(&geng, geng::EmptyLoadingScreen, future, {
+            let geng = geng.clone();
+            move |(connection, features)| Overlay::new(&geng, connection, features)
+        }),
     );
 }

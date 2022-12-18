@@ -4,14 +4,21 @@ pub struct Bot {
     config: Config,
     ttv_client: ttv::Client,
     sender: Sender,
+    receiver: std::sync::mpsc::Receiver<ClientMessage>,
 }
 
 impl Bot {
-    pub fn new(config: Config, ttv_client: ttv::Client, sender: Sender) -> Self {
+    pub fn new(
+        config: Config,
+        ttv_client: ttv::Client,
+        sender: Sender,
+        receiver: std::sync::mpsc::Receiver<ClientMessage>,
+    ) -> Self {
         Self {
             config,
             ttv_client,
             sender,
+            receiver,
         }
     }
     pub fn handle_ttv(&mut self, message: ttv::Message) {
@@ -46,8 +53,16 @@ impl Bot {
         }
     }
     pub fn run(mut self) {
-        while let Some(msg) = self.ttv_client.wait_next_message() {
-            self.handle_ttv(msg);
+        loop {
+            while let Some(msg) = self.ttv_client.next_message() {
+                self.handle_ttv(msg);
+            }
+            for msg in self.receiver.try_iter() {
+                if let ClientMessage::Say { text } = msg {
+                    self.ttv_client.say(&text);
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
         }
     }
 }

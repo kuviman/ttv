@@ -18,7 +18,7 @@ pub struct Config {
 
 #[derive(Clone)]
 pub struct Sender {
-    senders: Arc<Mutex<Vec<Box<dyn geng::net::Sender<ServerMessage>>>>>,
+    senders: Arc<Mutex<Vec<Arc<Mutex<Box<dyn geng::net::Sender<ServerMessage>>>>>>>,
 }
 
 impl Sender {
@@ -29,11 +29,11 @@ impl Sender {
     }
     pub fn broadcast(&self, message: ServerMessage) {
         for sender in &mut *self.senders.lock().unwrap() {
-            sender.send(message.clone());
+            sender.lock().unwrap().send(message.clone());
         }
     }
 
-    pub fn register(&self, sender: Box<dyn geng::net::Sender<ServerMessage>>) {
+    pub fn register(&self, sender: Arc<Mutex<Box<dyn geng::net::Sender<ServerMessage>>>>) {
         self.senders.lock().unwrap().push(sender);
     }
 }
@@ -51,7 +51,10 @@ fn main() {
         serde_json::from_reader(std::fs::File::open("config.json").unwrap()).unwrap();
     let mut ttv = ttv::Client::new(&config.channel_login, &config.bot_login);
 
-    struct WsClient {}
+    struct WsClient {
+        sender: Arc<Mutex<Box<dyn geng::net::Sender<ServerMessage>>>>,
+        bot_sender: std::sync::mpsc::Sender<ClientMessage>,
+    }
 
     impl Drop for WsClient {
         fn drop(&mut self) {
@@ -61,17 +64,47 @@ fn main() {
 
     impl geng::net::Receiver<ClientMessage> for WsClient {
         fn handle(&mut self, message: ClientMessage) {
-            // todo!()
+            fn key_file_path(key: &str) -> std::path::PathBuf {
+                std::path::Path::new("storage").join(key)
+            }
+            match message {
+                ClientMessage::GetKeyValue { request_id, key } => {
+                    let value = match std::fs::File::open(key_file_path(&key)) {
+                        Ok(mut file) => {
+                            let mut result = String::new();
+                            file.read_to_string(&mut result);
+                            Some(result)
+                        }
+                        Err(e) => None,
+                    };
+                    self.sender
+                        .lock()
+                        .unwrap()
+                        .send(ServerMessage::KeyValue { request_id, value });
+                }
+                ClientMessage::SetKeyValue { key, value } => {
+                    let path = key_file_path(&key);
+                    std::fs::create_dir_all(&path.parent().unwrap()).unwrap();
+                    std::fs::File::create(path)
+                        .unwrap()
+                        .write_all(value.as_bytes())
+                        .unwrap();
+                }
+                ClientMessage::Say { text } => {
+                    self.bot_sender.send(ClientMessage::Say { text });
+                }
+            }
         }
     }
 
     struct WsApp {
         sender: Sender,
+        bot_sender: std::sync::mpsc::Sender<ClientMessage>,
     }
 
     impl WsApp {
-        pub fn new(sender: Sender) -> Self {
-            Self { sender }
+        pub fn new(sender: Sender, bot_sender: std::sync::mpsc::Sender<ClientMessage>) -> Self {
+            Self { sender, bot_sender }
         }
     }
 
@@ -80,17 +113,22 @@ fn main() {
         type ServerMessage = ServerMessage;
         type ClientMessage = ClientMessage;
         fn connect(&mut self, sender: Box<dyn geng::net::Sender<ServerMessage>>) -> WsClient {
-            self.sender.register(sender);
-            WsClient {}
+            let sender = Arc::new(Mutex::new(sender));
+            self.sender.register(sender.clone());
+            WsClient {
+                sender,
+                bot_sender: self.bot_sender.clone(),
+            }
         }
     }
 
     let sender = Sender::new();
+    let (bot_sender, bot_receiver) = std::sync::mpsc::channel();
 
     std::thread::spawn({
         let sender = sender.clone();
         || {
-            geng::net::Server::new(WsApp::new(sender), "0.0.0.0:8001").run();
+            geng::net::Server::new(WsApp::new(sender, bot_sender), "0.0.0.0:8001").run();
         }
     });
 
@@ -135,9 +173,9 @@ fn main() {
             });
         }
 
-        serve("target/geng", false);
+        serve("web", false);
     });
 
-    let bot = bot::Bot::new(config, ttv, sender);
+    let bot = bot::Bot::new(config, ttv, sender, bot_receiver);
     bot.run();
 }

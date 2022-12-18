@@ -2,3 +2,5 @@
 /Cargo.lock
 secret/
 /data.db
+/web/
+/storage/

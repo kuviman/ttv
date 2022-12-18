@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct Skin {
     pub face: String,
     pub hat: String,

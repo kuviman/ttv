@@ -2,12 +2,14 @@ use super::*;
 
 mod assets;
 mod attacks;
+mod db;
 mod draw;
 mod movement;
 mod skin;
 mod spawn;
 mod ttv_commands;
 
+use db::*;
 use skin::Skin;
 
 pub use assets::Assets;
@@ -57,6 +59,7 @@ enum RaffleMode {
 }
 
 pub struct State {
+    connection: Connection,
     // opt: Opt,
     geng: Geng,
     assets: Rc<Assets>,
@@ -81,7 +84,7 @@ pub struct State {
     victory_fade: f32,
     idle: bool,
     idle_fade: f32,
-    // db: Db,
+    db: Db,
     background_entities: Vec<BackgroundEntity>,
     raffle_mode: RaffleMode,
     effects: Vec<Effect>,
@@ -118,6 +121,7 @@ impl State {
     pub fn new(
         geng: &Geng,
         assets: &Rc<Assets>,
+        connection: Connection,
         // config: Config,
         // ttv_client: ttv::Client,
         // opt: Opt,
@@ -133,6 +137,8 @@ impl State {
         battle_music.play();
 
         Self {
+            db: Db::new(connection.clone()),
+            connection,
             volume: assets.constants.volume,
             // config,
             // opt,
@@ -231,19 +237,18 @@ impl State {
         self.raffle_mode = mode;
     }
 
-    fn find_skin(&self, name: &str, insert_if_absent: bool) -> Skin {
-        Skin::random(&self.assets)
-        // if let Some(skin) = self.db.find_skin(name) {
-        //     return skin;
-        // }
-        // let mut skin = Skin::random(&self.assets);
-        // if let Some(custom) = self.assets.guy.custom_map.get(name) {
-        //     skin.custom = Some(custom.to_owned());
-        // }
-        // if insert_if_absent {
-        //     self.db.set_skin(name, &skin);
-        // }
-        // skin
+    async fn find_skin(&self, name: &str, insert_if_absent: bool) -> Skin {
+        if let Some(skin) = self.db.find_skin(name).await {
+            return skin;
+        }
+        let mut skin = Skin::random(&self.assets);
+        if let Some(custom) = self.assets.guy.custom_map.get(name) {
+            skin.custom = Some(custom.to_owned());
+        }
+        if insert_if_absent {
+            self.db.set_skin(name, &skin);
+        }
+        skin
     }
     fn update_impl(&mut self, delta_time: f32) {
         if self.geng.window().is_key_pressed(geng::Key::PageUp) {
@@ -339,112 +344,115 @@ impl Feature for State {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.draw_impl(framebuffer);
     }
-    // fn handle_event(&mut self, event: geng::Event) {
-    //     match event {
-    //         geng::Event::MouseDown { position, button } => {
-    //             let position = self.camera.screen_to_world(
-    //                 self.framebuffer_size.map(|x| x as f32),
-    //                 position.map(|x| x as f32),
-    //             );
-    //             match button {
-    //                 geng::MouseButton::Left => {
-    //                     let mut iter = self.guys.iter_mut();
-    //                     if let Some(guy) =
-    //                         iter.find(|guy| (guy.position - position).len() < State::GUY_RADIUS)
-    //                     {
-    //                         guy.health += self.assets.constants.health_per_click;
-    //                         guy.max_health += self.assets.constants.health_per_click;
-    //                         let mut effect = self.assets.levelup_sfx.effect();
-    //                         effect.set_volume(self.volume);
-    //                         effect.play();
-    //                         self.effects.push(Effect {
-    //                             pos: guy.position,
-    //                             scale_up: 0.2,
-    //                             offset: 1.0,
-    //                             size: 1.0,
-    //                             time: 0.0,
-    //                             max_time: 1.35,
-    //                             back_texture: Some(self.assets.levelup.clone()),
-    //                             front_texture: Some(self.assets.levelup_front.clone()),
-    //                             guy_id: Some(guy.id),
-    //                             color: Rgba::YELLOW,
-    //                         });
-    //                     }
-    //                 }
-    //                 geng::MouseButton::Right => {
-    //                     for guy in &self.guys {
-    //                         if (guy.position - position).len() < State::GUY_RADIUS {
-    //                             self.effects.push(Effect {
-    //                                 pos: guy.position,
-    //                                 scale_up: 1.0,
-    //                                 offset: 0.3,
-    //                                 size: 1.0,
-    //                                 time: 0.0,
-    //                                 max_time: 0.7,
-    //                                 back_texture: None,
-    //                                 front_texture: Some(self.assets.skull.clone()),
-    //                                 guy_id: Some(guy.id),
-    //                                 color: Rgba::BLACK,
-    //                             });
+    async fn handle_event(&mut self, event: geng::Event) {
+        match event {
+            geng::Event::MouseDown { position, button } => {
+                let position = self.camera.screen_to_world(
+                    self.framebuffer_size.map(|x| x as f32),
+                    position.map(|x| x as f32),
+                );
+                match button {
+                    geng::MouseButton::Left => {
+                        let mut iter = self.guys.iter_mut();
+                        if let Some(guy) =
+                            iter.find(|guy| (guy.position - position).len() < State::GUY_RADIUS)
+                        {
+                            guy.health += self.assets.constants.health_per_click;
+                            guy.max_health += self.assets.constants.health_per_click;
+                            let mut effect = self.assets.levelup_sfx.effect();
+                            effect.set_volume(self.volume);
+                            effect.play();
+                            self.effects.push(Effect {
+                                pos: guy.position,
+                                scale_up: 0.2,
+                                offset: 1.0,
+                                size: 1.0,
+                                time: 0.0,
+                                max_time: 1.35,
+                                back_texture: Some(self.assets.levelup.clone()),
+                                front_texture: Some(self.assets.levelup_front.clone()),
+                                guy_id: Some(guy.id),
+                                color: Rgba::YELLOW,
+                            });
+                        }
+                    }
+                    geng::MouseButton::Right => {
+                        for guy in &self.guys {
+                            if (guy.position - position).len() < State::GUY_RADIUS {
+                                self.effects.push(Effect {
+                                    pos: guy.position,
+                                    scale_up: 1.0,
+                                    offset: 0.3,
+                                    size: 1.0,
+                                    time: 0.0,
+                                    max_time: 0.7,
+                                    back_texture: None,
+                                    front_texture: Some(self.assets.skull.clone()),
+                                    guy_id: Some(guy.id),
+                                    color: Rgba::BLACK,
+                                });
 
-    //                             let mut sound_effect = self.assets.death_sfx.effect();
-    //                             sound_effect.set_volume(self.volume * 0.5);
-    //                             sound_effect.play();
-    //                         }
-    //                     }
-    //                     self.guys
-    //                         .retain(|guy| (guy.position - position).len() > State::GUY_RADIUS);
-    //                 }
-    //                 _ => {}
-    //             }
-    //         }
-    //         geng::Event::KeyDown { key } => match key {
-    //             geng::Key::S => {
-    //                 self.spawn_guy(
-    //                     global_rng()
-    //                         .sample_iter(rand::distributions::Alphanumeric)
-    //                         .map(|c| c as char)
-    //                         .take(global_rng().gen_range(5..=15))
-    //                         .collect(),
-    //                     true,
-    //                 );
-    //             }
-    //             geng::Key::Space => {
-    //                 if self.idle {
-    //                     self.start_raffle(self.raffle_mode);
-    //                 } else if !self.process_battle {
-    //                     for guy in &self.guys {
-    //                         let current_level = 1; // self.db.find_level(&guy.name);
-    //                         if !guy.should_never_win {
-    //                             // self.db.set_level(&guy.name, current_level + 1);
-    //                         }
-    //                     }
-    //                     self.process_battle = true;
-    //                 } else {
-    //                     self.process_battle = false;
-    //                     self.idle = true;
-    //                 }
-    //             }
-    //             geng::Key::F11 => {
-    //                 self.geng.window().toggle_fullscreen();
-    //             }
-    //             _ => {}
-    //         },
-    //         _ => {}
-    //     }
-    // }
+                                let mut sound_effect = self.assets.death_sfx.effect();
+                                sound_effect.set_volume(self.volume * 0.5);
+                                sound_effect.play();
+                            }
+                        }
+                        self.guys
+                            .retain(|guy| (guy.position - position).len() > State::GUY_RADIUS);
+                    }
+                    _ => {}
+                }
+            }
+            geng::Event::KeyDown { key } => match key {
+                geng::Key::S => {
+                    self.spawn_guy(
+                        global_rng()
+                            .sample_iter(rand::distributions::Alphanumeric)
+                            .map(|c| c as char)
+                            .take(global_rng().gen_range(5..=15))
+                            .collect(),
+                        true,
+                    )
+                    .await;
+                }
+                geng::Key::Space => {
+                    if self.idle {
+                        self.start_raffle(self.raffle_mode);
+                    } else if !self.process_battle {
+                        for guy in &self.guys {
+                            let current_level = 1; // self.db.find_level(&guy.name);
+                            if !guy.should_never_win {
+                                // self.db.set_level(&guy.name, current_level + 1);
+                            }
+                        }
+                        self.process_battle = true;
+                    } else {
+                        self.process_battle = false;
+                        self.idle = true;
+                    }
+                }
+                geng::Key::F11 => {
+                    self.geng.window().toggle_fullscreen();
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
     async fn update(&mut self, delta_time: f32) {
         self.update_impl(delta_time);
     }
 
-    async fn load(geng: Geng, assets_path: std::path::PathBuf) -> Self
+    async fn load(geng: Geng, assets_path: std::path::PathBuf, connection: Connection) -> Self
     where
         Self: Sized,
     {
-        todo!()
+        let mut assets: Assets = geng::LoadAsset::load(&geng, &assets_path).await.unwrap();
+        assets.process();
+        Self::new(&geng, &Rc::new(assets), connection)
     }
 
     async fn handle(&mut self, message: &ServerMessage) {
-        todo!()
+        self.handle_message(message.clone()).await;
     }
 }

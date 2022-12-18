@@ -321,6 +321,7 @@ impl State {
         } else if self.guys.len() == 1 {
             let winner = self.guys.iter().next().unwrap();
             if !self.winning_screen {
+                // TODO
                 #[cfg(feature = "false")]
                 if !self.opt.no_chat_spam {
                     match self.raffle_mode {

@@ -17,7 +17,7 @@ pub struct State {
 
 #[async_trait(?Send)]
 impl Feature for State {
-    async fn load(geng: Geng, path: std::path::PathBuf) -> Self
+    async fn load(geng: Geng, path: std::path::PathBuf, connection: Connection) -> Self
     where
         Self: Sized,
     {
