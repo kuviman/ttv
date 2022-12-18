@@ -32,28 +32,26 @@ pub struct State {
     farticles: Vec<Farticle>,
 }
 
+#[async_trait(?Send)]
 impl Feature for State {
-    fn load(geng: Geng, assets_path: std::path::PathBuf) -> Pin<Box<dyn Future<Output = Self>>>
+    async fn load(geng: Geng, assets_path: std::path::PathBuf) -> Self
     where
         Self: Sized,
     {
-        async move {
-            Self {
-                assets: geng::LoadAsset::load(&geng, &assets_path).await.unwrap(),
-                framebuffer_size: vec2(1.0, 1.0),
-                geng,
-                camera: geng::Camera2d {
-                    center: Vec2::ZERO,
-                    rotation: 0.0,
-                    fov: 10.0,
-                },
-                farticles: vec![],
-            }
+        Self {
+            assets: geng::LoadAsset::load(&geng, &assets_path).await.unwrap(),
+            framebuffer_size: vec2(1.0, 1.0),
+            geng,
+            camera: geng::Camera2d {
+                center: Vec2::ZERO,
+                rotation: 0.0,
+                fov: 10.0,
+            },
+            farticles: vec![],
         }
-        .boxed_local()
     }
 
-    fn update(&mut self, delta_time: f32) {
+    async fn update(&mut self, delta_time: f32) {
         for farticle in &mut self.farticles {
             farticle.t -= delta_time;
             farticle.pos += farticle.vel * delta_time;
@@ -82,7 +80,7 @@ impl Feature for State {
         }
     }
 
-    fn handle(&mut self, message: &ServerMessage) {
+    async fn handle(&mut self, message: &ServerMessage) {
         let ServerMessage::ChatMessage { message, .. } = message else { return };
         if message.trim() != "!fart" {
             return;

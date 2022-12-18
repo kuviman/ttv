@@ -16,29 +16,27 @@ pub struct State {
     font_program: ugli::Program,
 }
 
+#[async_trait(?Send)]
 impl Feature for State {
-    fn load(geng: Geng, assets_path: std::path::PathBuf) -> Pin<Box<dyn Future<Output = Self>>>
+    async fn load(geng: Geng, assets_path: std::path::PathBuf) -> Self
     where
         Self: Sized,
     {
-        async move {
-            Self {
-                assets: geng::LoadAsset::load(&geng, &assets_path).await.unwrap(),
-                font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
-                camera: geng::Camera2d {
-                    center: Vec2::ZERO,
-                    rotation: 0.0,
-                    fov: 10.0,
-                },
-                geng,
-                time: 10.0,
-                name: "".to_owned(),
-            }
+        Self {
+            assets: geng::LoadAsset::load(&geng, &assets_path).await.unwrap(),
+            font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
+            camera: geng::Camera2d {
+                center: Vec2::ZERO,
+                rotation: 0.0,
+                fov: 10.0,
+            },
+            geng,
+            time: 10.0,
+            name: "".to_owned(),
         }
-        .boxed_local()
     }
 
-    fn update(&mut self, delta_time: f32) {
+    async fn update(&mut self, delta_time: f32) {
         self.time += delta_time / 2.0;
     }
 
@@ -73,7 +71,7 @@ impl Feature for State {
         );
     }
 
-    fn handle(&mut self, message: &ServerMessage) {
+    async fn handle(&mut self, message: &ServerMessage) {
         let ServerMessage::RewardRedemption { name, reward } = message else { return };
         if reward != "Hello" {
             return;

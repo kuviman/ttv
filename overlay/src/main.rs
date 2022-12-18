@@ -1,3 +1,4 @@
+#![deny(unused_must_use)]
 use geng::prelude::*;
 
 use interop::*;
@@ -14,17 +15,78 @@ mod sound_commands;
 
 type Connection = geng::net::client::Connection<ServerMessage, ClientMessage>;
 
+#[async_trait(?Send)]
 trait Feature: 'static {
-    fn load(geng: Geng, path: std::path::PathBuf) -> Pin<Box<dyn Future<Output = Self>>>
+    async fn load(geng: Geng, path: std::path::PathBuf) -> Self
     where
         Self: Sized;
-    fn update(&mut self, delta_time: f32);
+    async fn update(&mut self, delta_time: f32);
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer);
-    fn handle(&mut self, message: &ServerMessage);
+    async fn handle(&mut self, message: &ServerMessage);
+}
+
+struct SyncFeature {
+    inner: Option<Box<dyn Feature>>,
+    future: Option<Pin<Box<dyn Future<Output = Box<dyn Feature>>>>>,
+    messages: std::collections::VecDeque<ServerMessage>,
+}
+
+impl SyncFeature {
+    fn new(feature: Box<dyn Feature>) -> Self {
+        Self {
+            inner: Some(feature),
+            future: None,
+            messages: default(),
+        }
+    }
+    fn update(&mut self, delta_time: f32) {
+        if let Some(message) = self.messages.pop_front() {
+            if let Some(mut inner) = self.inner.take() {
+                self.future = Some(
+                    async move {
+                        inner.handle(&message).await;
+                        inner
+                    }
+                    .boxed_local(),
+                );
+            } else {
+                self.messages.push_front(message);
+            }
+        }
+        if let Some(mut inner) = self.inner.take() {
+            self.future = Some(
+                async move {
+                    inner.update(delta_time).await;
+                    inner
+                }
+                .boxed_local(),
+            );
+        }
+        if let Some(mut future) = self.future.take() {
+            match future.as_mut().poll(&mut std::task::Context::from_waker(
+                futures::task::noop_waker_ref(),
+            )) {
+                std::task::Poll::Ready(state) => {
+                    self.inner = Some(state);
+                }
+                std::task::Poll::Pending => {
+                    self.future = Some(future);
+                }
+            }
+        }
+    }
+    fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
+        if let Some(inner) = &mut self.inner {
+            inner.draw(framebuffer);
+        }
+    }
+    fn handle(&mut self, message: &ServerMessage) {
+        self.messages.push_back(message.clone());
+    }
 }
 
 struct Overlay {
-    features: Vec<Box<dyn Feature>>,
+    features: Vec<SyncFeature>,
     connection: Option<Connection>,
     receiver: std::sync::mpsc::Receiver<ServerMessage>,
 }
@@ -57,7 +119,7 @@ impl Overlay {
             }
         });
         Self {
-            features,
+            features: features.into_iter().map(SyncFeature::new).collect(),
             connection,
             receiver,
         }

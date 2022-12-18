@@ -334,6 +334,7 @@ impl State {
     }
 }
 
+#[async_trait(?Send)]
 impl Feature for State {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.draw_impl(framebuffer);
@@ -432,18 +433,18 @@ impl Feature for State {
     //         _ => {}
     //     }
     // }
-    fn update(&mut self, delta_time: f32) {
+    async fn update(&mut self, delta_time: f32) {
         self.update_impl(delta_time);
     }
 
-    fn load(geng: Geng, assets_path: std::path::PathBuf) -> Pin<Box<dyn Future<Output = Self>>>
+    async fn load(geng: Geng, assets_path: std::path::PathBuf) -> Self
     where
         Self: Sized,
     {
         todo!()
     }
 
-    fn handle(&mut self, message: &ServerMessage) {
+    async fn handle(&mut self, message: &ServerMessage) {
         todo!()
     }
 }

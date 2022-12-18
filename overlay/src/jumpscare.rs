@@ -13,22 +13,20 @@ pub struct State {
     time: f32,
 }
 
+#[async_trait(?Send)]
 impl Feature for State {
-    fn load(geng: Geng, path: std::path::PathBuf) -> Pin<Box<dyn Future<Output = Self>>>
+    async fn load(geng: Geng, path: std::path::PathBuf) -> Self
     where
         Self: Sized,
     {
-        async move {
-            Self {
-                assets: geng::LoadAsset::load(&geng, &path).await.unwrap(),
-                geng,
-                time: 0.0,
-            }
+        Self {
+            assets: geng::LoadAsset::load(&geng, &path).await.unwrap(),
+            geng,
+            time: 0.0,
         }
-        .boxed_local()
     }
 
-    fn update(&mut self, delta_time: f32) {
+    async fn update(&mut self, delta_time: f32) {
         self.time -= delta_time;
     }
 
@@ -50,7 +48,7 @@ impl Feature for State {
         );
     }
 
-    fn handle(&mut self, message: &ServerMessage) {
+    async fn handle(&mut self, message: &ServerMessage) {
         let ServerMessage::ChatMessage { message, .. } = message else { return };
         if message.trim() != "!jumpscare" {
             return;
