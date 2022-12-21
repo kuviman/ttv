@@ -89,9 +89,17 @@ impl Client {
 
         std::thread::spawn({
             let channel_login = channel_login.clone();
+            let bot_login = bot_login.to_owned();
             move || {
                 debug!("PubSub thread started");
-                pubsub(&channel_login, messages_sender);
+                pubsub(
+                    &Secrets::init()
+                        .unwrap()
+                        .ttv_access_token(bot_login)
+                        .unwrap(),
+                    &channel_login,
+                    messages_sender,
+                );
                 debug!("PubSub thread stopped");
             }
         });
@@ -127,9 +135,8 @@ impl Client {
     }
 }
 
-fn pubsub(login: &str, sender: UnboundedSender<Message>) {
+fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Message>) {
     let secrets = Secrets::init().unwrap();
-    let access_token = secrets.ttv_access_token(login).unwrap();
     let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -137,7 +144,7 @@ fn pubsub(login: &str, sender: UnboundedSender<Message>) {
     let user_id = tokio_runtime.block_on(async {
         let json = reqwest::Client::new()
             .get("https://api.twitch.tv/helix/users")
-            .query(&[("login", login)])
+            .query(&[("login", channel_login)])
             .header("Authorization", format!("Bearer {}", access_token))
             .header("Client-ID", &secrets.config.ttv.client_id)
             .send()
@@ -173,7 +180,7 @@ fn pubsub(login: &str, sender: UnboundedSender<Message>) {
             "type": "LISTEN",
             "nonce": "kekw",
             "data": {
-                "topics": [format!("channel-points-channel-v1.{}", user_id)],
+                "topics": [format!("community-points-channel-v1.{}", user_id)],
                 "auth_token": access_token,
             }
         });
