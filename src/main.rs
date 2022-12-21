@@ -1,64 +1,71 @@
 use geng::prelude::*;
 
-mod app;
-mod db;
-mod font;
-mod secret;
-mod skin;
-mod ttv;
-mod util;
+mod client;
+#[cfg(not(target_arch = "wasm32"))]
+mod server;
 
-use db::Db;
-use secret::Secrets;
-use skin::Skin;
-use util::*;
-
-#[derive(clap::Parser)]
-pub struct Opt {
-    #[clap(long)]
-    pub no_chat_spam: bool,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum ServerMessage {
+    ChatMessage {
+        name: String,
+        message: String,
+    },
+    RewardRedemption {
+        name: String,
+        reward: String,
+    },
+    KeyValue {
+        request_id: String,
+        value: Option<String>,
+    },
 }
 
-#[derive(Deserialize)]
-pub struct Config {
-    pub channel_login: String,
-    pub bot_login: String,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum ClientMessage {
+    Say { text: String },
+    GetKeyValue { request_id: String, key: String },
+    SetKeyValue { key: String, value: String },
+}
+
+#[derive(clap::Parser)]
+struct Opt {
+    #[clap(long)]
+    pub server: Option<String>,
+    #[clap(long)]
+    pub connect: Option<String>,
 }
 
 fn main() {
     {
         let mut builder = logger::builder();
         builder.parse_filters("geng=info");
-        builder.parse_filters("sqlx=off");
         builder.parse_filters("reqwest=off");
         logger::init_with(builder).unwrap();
     }
+    geng::setup_panic_handler();
 
-    let opt: Opt = program_args::parse();
+    let mut opt: Opt = program_args::parse();
 
-    let geng = Geng::new("ttv");
-    let geng = &geng;
-    geng::run(
-        geng,
-        geng::LoadingScreen::new(
-            geng,
-            geng::EmptyLoadingScreen,
-            <app::Assets as geng::LoadAsset>::load(geng, &static_path().join("assets")),
-            {
-                let geng = geng.clone();
-                move |assets| {
-                    let mut assets = assets.unwrap();
-                    info!("Assets loaded");
-                    assets.process();
-                    let config: Config = serde_json::from_reader(
-                        std::fs::File::open(static_path().join("config.json")).unwrap(),
-                    )
-                    .unwrap();
-                    let ttv_client = ttv::Client::new(&config.channel_login, &config.bot_login);
-                    info!("Connected to ttv");
-                    app::State::new(&geng, &Rc::new(assets), config, ttv_client, opt)
-                }
-            },
-        ),
-    );
+    if opt.connect.is_none() && opt.server.is_none() {
+        if cfg!(target_arch = "wasm32") {
+            opt.connect = Some("ws://127.0.0.1:1155".to_owned());
+        } else {
+            opt.server = Some("127.0.0.1:1155".to_owned());
+            opt.connect = Some("ws://127.0.0.1:1155".to_owned());
+        }
+    }
+
+    if opt.server.is_some() && opt.connect.is_none() {
+        #[cfg(not(target_arch = "wasm32"))]
+        server::run(opt.server.as_deref().unwrap());
+    } else {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(addr) = &opt.server {
+            let addr = addr.to_owned();
+            std::thread::spawn(move || {
+                server::run(&addr);
+            });
+        }
+        client::run(opt.connect.as_deref().unwrap());
+    }
 }

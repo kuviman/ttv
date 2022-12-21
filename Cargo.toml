@@ -1,9 +1,5 @@
-[workspace]
-members = ["server", "overlay", "interop"]
-resolver = "2"
-
 [package]
-name = "raffle-royale"
+name = "ttv"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,8 +11,9 @@ serde = "1"
 websocket-lite = "0.5"
 reqwest = { version = "0.11", features = ["json"] }
 url = "2"
-open = "3"
 eyre = "0.6"
-hyper = { version = "0.14", features = ["server"] }
+hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
+hyper-staticfile = "0.9"
 sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "all-databases"] }
 toml = "0.5"
+open = "3"
