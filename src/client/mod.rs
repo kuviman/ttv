@@ -3,12 +3,15 @@ use super::*;
 // TODO
 mod font;
 
+mod avatars;
 mod boom;
-mod fart;
 mod hello;
 mod jumpscare;
 mod raffle_royale;
 mod sound_commands;
+mod util;
+
+use util::*;
 
 #[async_trait(?Send)]
 trait Feature: 'static {
@@ -216,7 +219,7 @@ impl geng::State for Overlay {
         if self.features.iter().any(|feature| feature.inner.is_none()) {
             return;
         }
-        ugli::clear(framebuffer, Some(Rgba::TRANSPARENT_WHITE), None, None);
+        ugli::clear(framebuffer, Some(Rgba::new(0.0, 1.0, 0.0, 0.0)), None, None);
         for feature in &mut self.features {
             feature.draw(framebuffer);
         }
@@ -264,9 +267,9 @@ pub fn run(addr: &str) {
             let features = future::join_all(load_features![
                 geng: geng,
                 connection: connection.clone(),
+                avatars,
                 raffle_royale,
                 boom,
-                fart,
                 hello,
                 jumpscare,
                 sound_commands,
