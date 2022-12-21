@@ -5,15 +5,16 @@ edition = "2021"
 
 [dependencies]
 geng = { git = "https://github.com/kuviman/geng" }
-twitch-irc = { version = "4", features = ["with-serde"] }
-tokio = { version = "1", features = ["rt-multi-thread"] }
 serde = "1"
-websocket-lite = "0.5"
-reqwest = { version = "0.11", features = ["json"] }
 url = "2"
 eyre = "0.6"
+toml = "0.5"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+websocket-lite = "0.5"
+reqwest = { version = "0.11", features = ["json"] }
 hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
 hyper-staticfile = "0.9"
-sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "all-databases"] }
-toml = "0.5"
 open = "3"
+twitch-irc = { version = "4", features = ["with-serde"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
