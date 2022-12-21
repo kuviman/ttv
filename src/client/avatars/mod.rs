@@ -115,6 +115,8 @@ pub struct State {
     crabs: HashMap<String, Crab>,
     farticles: Vec<Farticle>,
     connection: Connection,
+    bounce_points: Vec<Vec2<f32>>,
+    bouncy_game: bool,
 }
 
 #[async_trait(?Send)]
@@ -124,6 +126,19 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
+            bouncy_game: false,
+            bounce_points: {
+                let mut v = Vec::new();
+                for x in -5..=5 {
+                    for y in -2..=2 {
+                        if (x + y) % 2 == 0 {
+                            continue;
+                        }
+                        v.push(vec2(x as f32, y as f32) * 2.5);
+                    }
+                }
+                v
+            },
             connection,
             assets: geng::LoadAsset::load(&geng, &path).await.unwrap(),
             geng,
@@ -144,6 +159,19 @@ impl Feature for State {
             vec2(self.framebuffer_size.x / self.framebuffer_size.y, 1.0) * self.camera.fov / 2.0;
         for crab in self.crabs.values_mut() {
             crab.update(screen_size, delta_time);
+
+            if self.bouncy_game {
+                for &p in &self.bounce_points {
+                    let delta_pos = crab.pos - p;
+                    let pen = 1.0 + 0.2 - delta_pos.len();
+                    if pen > 0.0 {
+                        let n = delta_pos.normalize_or_zero();
+                        crab.pos += n * pen;
+                        crab.vel -= n * Vec2::dot(n, crab.vel);
+                        crab.vel += n * 10.0;
+                    }
+                }
+            }
 
             if crab.farts != 0 {
                 crab.fart_timer -= delta_time;
@@ -186,6 +214,20 @@ impl Feature for State {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size().map(|x| x as f32);
         let font: &geng::Font = self.geng.default_font();
+        if self.bouncy_game {
+            ugli::clear(framebuffer, Some(Rgba::new(0.0, 0.0, 0.0, 0.5)), None, None);
+            font.draw_with_outline(
+                framebuffer,
+                &self.camera,
+                "!drop",
+                vec2(0.0, 8.5),
+                geng::TextAlign::CENTER,
+                1.0,
+                Rgba::WHITE,
+                0.05,
+                Rgba::BLACK,
+            );
+        }
         for (name, crab) in &self.crabs {
             let y = (crab.t * 10.0).sin();
             let mov = (crab.vel.len() / CRAB_SPEED).min(1.0);
@@ -295,17 +337,36 @@ impl Feature for State {
                 .translate(farticle.pos),
             )
         }
+        if self.bouncy_game {
+            for &point in &self.bounce_points {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &draw_2d::Ellipse::circle(point, 0.3, Rgba::WHITE),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &draw_2d::Ellipse::circle(point, 0.2, Rgba::BLACK),
+                );
+            }
+        }
     }
     async fn handle(&mut self, message: &ServerMessage) {
         if let ServerMessage::ChatMessage { name, message } = message {
             let parts: Vec<&str> = message.split_whitespace().collect();
-            if name == "kuviman" && parts.first() == Some(&"!setavatar") && parts.len() == 3 {
-                self.connection
-                    .set_key_value(&format!("avatars/{}", parts[1]), &parts[2]);
-                if let Some(crab) = self.crabs.get_mut(parts[1]) {
-                    crab.custom = Some(parts[2].to_owned());
+            if name == "kuviman" {
+                if parts.first() == Some(&"!setavatar") && parts.len() == 3 {
+                    self.connection
+                        .set_key_value(&format!("avatars/{}", parts[1]), &parts[2]);
+                    if let Some(crab) = self.crabs.get_mut(parts[1]) {
+                        crab.custom = Some(parts[2].to_owned());
+                    }
+                    return;
                 }
-                return;
+                if message == "!bounce" {
+                    self.bouncy_game = !self.bouncy_game;
+                }
             }
             let crab = self.crabs.entry(name.to_owned()).or_insert_with(Crab::new);
             crab.custom = self
@@ -323,6 +384,12 @@ impl Feature for State {
                 "!doublefart" => {
                     crab.farts = 2;
                     crab.fart_timer = 0.0;
+                }
+                "!drop" => {
+                    crab.pos = vec2(
+                        global_rng().gen_range(-10.0..10.0),
+                        self.camera.fov / 2.0 + 1.0,
+                    );
                 }
                 _ => {
                     crab.text = Some(message.to_owned());
