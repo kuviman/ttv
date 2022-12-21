@@ -231,39 +231,41 @@ fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Messa
                     .as_object()
                     .unwrap()
                     .clone();
-                let data = message
-                    .get("data")
-                    .unwrap()
-                    .as_object()
-                    .unwrap()
-                    .get("redemption")
-                    .unwrap()
-                    .as_object()
-                    .unwrap();
-                let name = data
-                    .get("user")
-                    .unwrap()
-                    .as_object()
-                    .unwrap()
-                    .get("display_name")
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_owned();
-                let reward = data
-                    .get("reward")
-                    .unwrap()
-                    .as_object()
-                    .unwrap()
-                    .get("title")
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_owned();
-                info!("{} redeemed {}", name, reward);
-                sender
-                    .send(Message::RewardRedemption { name, reward })
-                    .unwrap();
+                if message.get("type").unwrap().as_str().unwrap() == "reward-redeemed" {
+                    let data = message
+                        .get("data")
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .get("redemption")
+                        .unwrap()
+                        .as_object()
+                        .unwrap();
+                    let name = data
+                        .get("user")
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .get("display_name")
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        .to_owned();
+                    let reward = data
+                        .get("reward")
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .get("title")
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        .to_owned();
+                    info!("{} redeemed {}", name, reward);
+                    sender
+                        .send(Message::RewardRedemption { name, reward })
+                        .unwrap();
+                }
             }
         }
     });
