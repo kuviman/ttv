@@ -302,6 +302,9 @@ impl Feature for State {
             if name == "kuviman" && parts.first() == Some(&"!setavatar") && parts.len() == 3 {
                 self.connection
                     .set_key_value(&format!("avatars/{}", parts[1]), &parts[2]);
+                if let Some(crab) = self.crabs.get_mut(parts[1]) {
+                    crab.custom = Some(parts[2].to_owned());
+                }
                 return;
             }
             let crab = self.crabs.entry(name.to_owned()).or_insert_with(Crab::new);
