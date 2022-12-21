@@ -9,6 +9,7 @@ mod hello;
 mod jumpscare;
 mod raffle_royale;
 mod sound_commands;
+mod text_commands;
 mod util;
 
 use util::*;
@@ -273,6 +274,7 @@ pub fn run(addr: &str) {
                 hello,
                 jumpscare,
                 sound_commands,
+                text_commands,
             ])
             .await;
             (connection, features)

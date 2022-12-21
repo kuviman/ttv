@@ -37,6 +37,7 @@ async fn load_custom(
 }
 
 struct Crab {
+    ground: bool,
     t: f32,
     pos: Vec2<f32>,
     vel: Vec2<f32>,
@@ -47,6 +48,7 @@ struct Crab {
     farts: usize,
     fart_timer: f32,
     custom: Option<String>,
+    score: i32,
 }
 
 struct Farticle {
@@ -66,8 +68,10 @@ const GRAVITY: f32 = 10.0;
 impl Crab {
     fn new() -> Self {
         Self {
+            score: 0,
+            ground: false,
             t: 0.0,
-            pos: Vec2::ZERO,
+            pos: vec2(0.0, -5.0),
             vel: Vec2::ZERO,
             target_pos: 0.0,
             stand_timer: 0.0,
@@ -81,13 +85,29 @@ impl Crab {
     fn update(&mut self, screen_size: Vec2<f32>, delta_time: f32) {
         self.t += delta_time;
         self.vel.y -= GRAVITY * delta_time;
-        self.vel.x += ((self.target_pos - self.pos.x).clamp_abs(CRAB_SPEED) - self.vel.x)
-            .clamp_abs(CRAB_ACCELERATION * delta_time);
+        if self.ground {
+            self.vel.x += ((self.target_pos - self.pos.x).clamp_abs(CRAB_SPEED) - self.vel.x)
+                .clamp_abs(CRAB_ACCELERATION * delta_time);
+        }
         self.pos += self.vel * delta_time;
+        self.ground = false;
         if self.pos.y < -screen_size.y + 1.0 {
+            self.ground = true;
             self.pos.y = -screen_size.y + 1.0;
             self.vel.y = self.vel.y.max(0.0);
         }
+
+        if self.pos.y > screen_size.y - 1.0 && self.vel.y > 0.0 {
+            self.ground = true;
+            self.pos.y = screen_size.y - 1.0;
+            self.vel.y = -self.vel.y;
+        }
+        if self.pos.x.abs() > screen_size.x - 1.0 {
+            self.ground = true;
+            self.pos.x = (screen_size.x - 1.0) * self.pos.x.signum();
+            self.vel.x = -self.vel.x;
+        }
+
         if (self.pos.x - self.target_pos).abs() < 0.1 {
             self.stand_timer -= delta_time;
             if self.stand_timer < 0.0 {
@@ -117,6 +137,10 @@ pub struct State {
     connection: Connection,
     bounce_points: Vec<Vec2<f32>>,
     bouncy_game: bool,
+    breakout: bool,
+    bricks: Vec<AABB<f32>>,
+    win_timer: f32,
+    grid_size: i32,
 }
 
 #[async_trait(?Send)]
@@ -126,6 +150,10 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
+            grid_size: 10,
+            win_timer: 0.0,
+            breakout: false,
+            bricks: Vec::new(),
             bouncy_game: false,
             bounce_points: {
                 let mut v = Vec::new();
@@ -157,6 +185,27 @@ impl Feature for State {
         self.time += delta_time;
         let screen_size =
             vec2(self.framebuffer_size.x / self.framebuffer_size.y, 1.0) * self.camera.fov / 2.0;
+
+        if self.breakout && self.bricks.is_empty() {
+            self.win_timer -= delta_time;
+            if self.win_timer < 0.0 {
+                self.win_timer = 20.0;
+                let brick_size = vec2(
+                    screen_size.x / self.grid_size as f32,
+                    screen_size.y / self.grid_size as f32,
+                );
+                for x in -self.grid_size..self.grid_size {
+                    for y in -self.grid_size..self.grid_size {
+                        self.bricks.push(
+                            AABB::point(Vec2::ZERO)
+                                .extend_positive(brick_size)
+                                .translate(vec2(x as f32, y as f32) * brick_size),
+                        );
+                    }
+                }
+            }
+        }
+
         for crab in self.crabs.values_mut() {
             crab.update(screen_size, delta_time);
 
@@ -170,6 +219,39 @@ impl Feature for State {
                         crab.vel -= n * Vec2::dot(n, crab.vel);
                         crab.vel += n * 10.0;
                     }
+                }
+            }
+
+            if self.breakout {
+                let mut destroyed = Vec::new();
+                for (i, &p) in self.bricks.iter().enumerate() {
+                    let dx = if crab.pos.x < p.x_min {
+                        crab.pos.x - p.x_min
+                    } else if crab.pos.x > p.x_max {
+                        crab.pos.x - p.x_max
+                    } else {
+                        0.0
+                    };
+                    let dy = if crab.pos.y < p.y_min {
+                        crab.pos.y - p.y_min
+                    } else if crab.pos.y > p.y_max {
+                        crab.pos.y - p.y_max
+                    } else {
+                        0.0
+                    };
+                    let delta_pos = vec2(dx, dy);
+                    let pen = 1.0 - delta_pos.len();
+                    if pen > 0.0 {
+                        let n = delta_pos.normalize_or_zero();
+                        crab.pos += n * pen;
+                        crab.vel -= n * Vec2::dot(n, crab.vel);
+                        crab.vel += n * 10.0;
+                        destroyed.push(i);
+                        crab.score += 1;
+                    }
+                }
+                for index in destroyed.into_iter().rev() {
+                    self.bricks.remove(index);
                 }
             }
 
@@ -254,6 +336,19 @@ impl Feature for State {
                 0.04,
                 Rgba::WHITE,
             );
+            if self.breakout {
+                font.draw_with_outline(
+                    framebuffer,
+                    &self.camera,
+                    &format!("score: {}", crab.score),
+                    crab.pos + vec2(0.0, 1.5),
+                    geng::TextAlign::CENTER,
+                    0.5,
+                    Rgba::BLACK,
+                    0.04,
+                    Rgba::WHITE,
+                );
+            }
 
             if let Some(text) = &crab.text {
                 let mut lines = Vec::new();
@@ -351,6 +446,57 @@ impl Feature for State {
                 );
             }
         }
+        if self.breakout {
+            for &p in &self.bricks {
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &draw_2d::Quad::new(p, Rgba::BLACK),
+                );
+                self.geng.draw_2d(
+                    framebuffer,
+                    &self.camera,
+                    &draw_2d::Quad::new(p.extend_uniform(-0.1), Rgba::WHITE),
+                );
+            }
+            if self.bricks.is_empty() {
+                if let Some((name, winner)) = self.crabs.iter().max_by_key(|(_, crab)| crab.score) {
+                    font.draw_with_outline(
+                        framebuffer,
+                        &self.camera,
+                        "winner is",
+                        vec2(0.0, 4.0),
+                        geng::TextAlign::CENTER,
+                        2.0,
+                        Rgba::BLACK,
+                        0.04,
+                        Rgba::WHITE,
+                    );
+                    font.draw_with_outline(
+                        framebuffer,
+                        &self.camera,
+                        name,
+                        vec2(0.0, 0.0),
+                        geng::TextAlign::CENTER,
+                        4.0,
+                        Rgba::BLACK,
+                        0.08,
+                        Rgba::WHITE,
+                    );
+                    font.draw_with_outline(
+                        framebuffer,
+                        &self.camera,
+                        &format!("with score of {}", winner.score),
+                        vec2(0.0, -2.0),
+                        geng::TextAlign::CENTER,
+                        2.0,
+                        Rgba::BLACK,
+                        0.04,
+                        Rgba::WHITE,
+                    );
+                }
+            }
+        }
     }
     async fn handle(&mut self, message: &ServerMessage) {
         if let ServerMessage::ChatMessage { name, message } = message {
@@ -366,6 +512,18 @@ impl Feature for State {
                 }
                 if message == "!bounce" {
                     self.bouncy_game = !self.bouncy_game;
+                    return;
+                }
+                if parts.first() == Some(&"!breakout") {
+                    if let Some(size) = parts.get(1) {
+                        if let Ok(size) = size.parse() {
+                            self.grid_size = size;
+                        }
+                    }
+                    self.breakout = !self.breakout;
+                    self.bricks.clear();
+                    self.win_timer = 0.0;
+                    return;
                 }
             }
             let crab = self.crabs.entry(name.to_owned()).or_insert_with(Crab::new);
@@ -373,10 +531,14 @@ impl Feature for State {
                 .connection
                 .get_key_value(&format!("avatars/{name}"))
                 .await;
+            if parts.first() == Some(&"!jump") {
+                let angle = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+                let angle = angle.clamp_abs(45);
+                crab.vel = vec2(0.0, if self.breakout { 30.0 } else { 10.0 })
+                    .rotate(angle as f32 * f32::PI / 180.0);
+                return;
+            }
             match message.trim() {
-                "!jump" => {
-                    crab.vel.y += 10.0;
-                }
                 "!fart" => {
                     crab.farts = 1;
                     crab.fart_timer = 0.0;
@@ -385,7 +547,7 @@ impl Feature for State {
                     crab.farts = 2;
                     crab.fart_timer = 0.0;
                 }
-                "!drop" => {
+                "!drop" if self.bouncy_game => {
                     crab.pos = vec2(
                         global_rng().gen_range(-10.0..10.0),
                         self.camera.fov / 2.0 + 1.0,
