@@ -165,12 +165,12 @@ impl State {
             background_entities: std::iter::from_fn(|| {
                 let d = 50.0;
                 Some(BackgroundEntity {
-                    texture_index: global_rng().gen_range(0..assets.background_entities.len()),
-                    position: vec2(global_rng().gen_range(-d..d), global_rng().gen_range(-d..d)),
+                    texture_index: thread_rng().gen_range(0..assets.background_entities.len()),
+                    position: vec2(thread_rng().gen_range(-d..d), thread_rng().gen_range(-d..d)),
                     color: *assets
                         .constants
                         .background_palette
-                        .choose(&mut global_rng())
+                        .choose(&mut thread_rng())
                         .unwrap(),
                 })
             })
@@ -269,8 +269,8 @@ impl State {
         };
         let start_music = was_idle && self.idle_fade == 1.0;
         if start_music {
-            self.lobby_music.pause();
-            self.battle_music.pause();
+            self.lobby_music.stop();
+            self.battle_music.stop();
             self.lobby_music = self.assets.lobby_music.effect();
             self.battle_music = self.assets.battle_music.effect();
         }
@@ -395,10 +395,10 @@ impl geng::State for State {
             geng::Event::KeyDown { key } => match key {
                 geng::Key::S => {
                     self.spawn_guy(
-                        global_rng()
+                        thread_rng()
                             .sample_iter(rand::distributions::Alphanumeric)
                             .map(|c| c as char)
-                            .take(global_rng().gen_range(5..=15))
+                            .take(thread_rng().gen_range(5..=15))
                             .collect(),
                         true,
                     );

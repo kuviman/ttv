@@ -31,35 +31,35 @@ impl Skin {
                 .guy
                 .face
                 .keys()
-                .choose(&mut global_rng())
+                .choose(&mut thread_rng())
                 .unwrap()
                 .clone(),
             hat: assets
                 .guy
                 .hat
                 .keys()
-                .choose(&mut global_rng())
+                .choose(&mut thread_rng())
                 .unwrap()
                 .clone(),
             robe: assets
                 .guy
                 .robe
                 .keys()
-                .choose(&mut global_rng())
+                .choose(&mut thread_rng())
                 .unwrap()
                 .clone(),
             beard: assets
                 .guy
                 .beard
                 .keys()
-                .choose(&mut global_rng())
+                .choose(&mut thread_rng())
                 .unwrap()
                 .clone(),
             custom: None,
             outfit_color: *assets
                 .constants
                 .guy_palette
-                .choose(&mut global_rng())
+                .choose(&mut thread_rng())
                 .unwrap(),
         }
     }

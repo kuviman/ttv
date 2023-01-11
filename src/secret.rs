@@ -31,7 +31,7 @@ impl Secrets {
         Ok(Self { path, config })
     }
     pub fn init() -> eyre::Result<Self> {
-        Self::init_from(static_path().join("secret"))
+        Self::init_from(run_dir().join("secret"))
     }
     pub fn ttv_access_token(&self, login: impl AsRef<str>) -> eyre::Result<String> {
         let login = login.as_ref();

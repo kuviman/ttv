@@ -43,7 +43,7 @@ fn main() {
         geng::LoadingScreen::new(
             geng,
             geng::EmptyLoadingScreen,
-            <app::Assets as geng::LoadAsset>::load(geng, &static_path().join("assets")),
+            <app::Assets as geng::LoadAsset>::load(geng, &run_dir().join("static").join("assets")),
             {
                 let geng = geng.clone();
                 move |assets| {
@@ -51,7 +51,7 @@ fn main() {
                     info!("Assets loaded");
                     assets.process();
                     let config: Config = serde_json::from_reader(
-                        std::fs::File::open(static_path().join("config.json")).unwrap(),
+                        std::fs::File::open(run_dir().join("static").join("config.json")).unwrap(),
                     )
                     .unwrap();
                     let ttv_client = ttv::Client::new(&config.channel_login, &config.bot_login);
