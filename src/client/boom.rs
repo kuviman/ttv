@@ -9,10 +9,10 @@ struct Assets {
 pub struct State {
     geng: Geng,
     assets: Assets,
-    framebuffer_size: Vec2<f32>,
+    framebuffer_size: vec2<f32>,
     camera: geng::Camera2d,
     time: f32,
-    pos: Vec2<f32>,
+    pos: vec2<f32>,
 }
 
 #[async_trait(?Send)]
@@ -26,12 +26,12 @@ impl Feature for State {
             geng,
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
-                center: Vec2::ZERO,
+                center: vec2::ZERO,
                 rotation: 0.0,
                 fov: 10.0,
             },
             time: 0.0,
-            pos: Vec2::ZERO,
+            pos: vec2::ZERO,
         }
     }
 
@@ -48,7 +48,7 @@ impl Feature for State {
             framebuffer,
             &self.camera,
             &draw_2d::TexturedQuad::colored(
-                AABB::point(self.pos).extend_symmetric(
+                Aabb2::point(self.pos).extend_symmetric(
                     vec2(
                         self.assets.texture.size().x as f32 / self.assets.texture.size().y as f32,
                         1.0,
@@ -68,8 +68,8 @@ impl Feature for State {
         self.time = 1.0;
         self.assets.sound.play();
         self.pos = vec2(
-            global_rng().gen_range(-1.0..1.0) * self.framebuffer_size.x / self.framebuffer_size.y,
-            global_rng().gen_range(-1.0..1.0),
+            thread_rng().gen_range(-1.0..1.0) * self.framebuffer_size.x / self.framebuffer_size.y,
+            thread_rng().gen_range(-1.0..1.0),
         ) * self.camera.fov
             / 2.0
             * 0.75;

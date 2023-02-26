@@ -33,7 +33,7 @@ impl State {
                     if len < State::MIN_DISTANCE {
                         let v = delta_pos.normalize_or_zero();
                         moves.push((guy.id, v * (State::MIN_DISTANCE - len) / 2.0));
-                        guy.velocity -= v * Vec2::dot(guy.velocity, v);
+                        guy.velocity -= v * vec2::dot(guy.velocity, v);
                     }
                 }
                 self.guys.insert(guy);

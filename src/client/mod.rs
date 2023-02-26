@@ -48,7 +48,7 @@ impl Connection {
         self.say(text);
     }
     async fn get_key_value<T: serde::de::DeserializeOwned>(&self, key: &str) -> Option<T> {
-        let request_id: String = global_rng()
+        let request_id: String = thread_rng()
             .sample_iter(rand::distributions::Alphanumeric)
             .map(|c| c as char)
             .take(64)
@@ -238,7 +238,7 @@ macro_rules! load_features {
         let geng = $geng;
         let connection = $connection;
         vec![
-            $(load_feature::<$feature::State>(&geng, static_path().join(stringify!($feature)), connection.clone()),)*
+            $(load_feature::<$feature::State>(&geng, run_dir().join("assets").join(stringify!($feature)), connection.clone()),)*
         ]
     }}
 }
@@ -282,9 +282,13 @@ pub fn run(addr: &str) {
     });
     geng::run(
         &geng,
-        geng::LoadingScreen::new(&geng, geng::EmptyLoadingScreen, future, {
-            let geng = geng.clone();
-            move |(connection, features)| Overlay::new(&geng, connection, features)
-        }),
+        geng::LoadingScreen::new(
+            &geng,
+            geng::EmptyLoadingScreen,
+            future.map({
+                let geng = geng.clone();
+                move |(connection, features)| Overlay::new(&geng, connection, features)
+            }),
+        ),
     );
 }

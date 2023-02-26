@@ -76,7 +76,7 @@ impl State {
                 }
 
                 let target = if let Ok(target) =
-                    guys.choose_weighted(&mut global_rng(), |guy| healths[&guy.id])
+                    guys.choose_weighted(&mut thread_rng(), |guy| healths[&guy.id])
                 {
                     target
                 } else {

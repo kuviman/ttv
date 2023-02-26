@@ -17,7 +17,7 @@ impl State {
                 Some(
                     self.camera.center
                         + vec2(
-                            global_rng().gen_range(
+                            thread_rng().gen_range(
                                 0.0..self.camera.fov / 2.0
                                     * (self.framebuffer_size.x as f32
                                         / self.framebuffer_size.y as f32)
@@ -25,7 +25,7 @@ impl State {
                             ),
                             0.0,
                         )
-                        .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
+                        .rotate(thread_rng().gen_range(0.0..2.0 * f32::PI)),
                 )
             })
             .take(50)
@@ -41,16 +41,16 @@ impl State {
             .unwrap_or(
                 self.camera.center
                     + vec2(
-                        global_rng().gen_range(
+                        thread_rng().gen_range(
                             0.0..self.camera.fov / 2.0
                                 * (self.framebuffer_size.x as f32 / self.framebuffer_size.y as f32)
                                     .max(1.0),
                         ),
                         0.0,
                     )
-                    .rotate(global_rng().gen_range(0.0..2.0 * f32::PI)),
+                    .rotate(thread_rng().gen_range(0.0..2.0 * f32::PI)),
             ),
-            velocity: Vec2::ZERO,
+            velocity: vec2::ZERO,
             health,
             max_health: health,
             spawn: 0.0,
@@ -59,7 +59,7 @@ impl State {
         let mut sound_effect = self
             .assets
             .spawn_sfx
-            .choose(&mut global_rng())
+            .choose(&mut thread_rng())
             .unwrap()
             .effect();
         sound_effect.set_volume(self.volume);

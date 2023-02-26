@@ -39,8 +39,8 @@ async fn load_custom(
 struct Crab {
     ground: bool,
     t: f32,
-    pos: Vec2<f32>,
-    vel: Vec2<f32>,
+    pos: vec2<f32>,
+    vel: vec2<f32>,
     target_pos: f32,
     stand_timer: f32,
     text: Option<String>,
@@ -53,8 +53,8 @@ struct Crab {
 
 struct Farticle {
     size: f32,
-    pos: Vec2<f32>,
-    vel: Vec2<f32>,
+    pos: vec2<f32>,
+    vel: vec2<f32>,
     color: Rgba<f32>,
     rot: f32,
     w: f32,
@@ -72,7 +72,7 @@ impl Crab {
             ground: false,
             t: 0.0,
             pos: vec2(0.0, -5.0),
-            vel: Vec2::ZERO,
+            vel: vec2::ZERO,
             target_pos: 0.0,
             stand_timer: 0.0,
             text: None,
@@ -82,7 +82,7 @@ impl Crab {
             custom: None,
         }
     }
-    fn update(&mut self, screen_size: Vec2<f32>, delta_time: f32) {
+    fn update(&mut self, screen_size: vec2<f32>, delta_time: f32) {
         self.t += delta_time;
         self.vel.y -= GRAVITY * delta_time;
         if self.ground {
@@ -111,9 +111,9 @@ impl Crab {
         if (self.pos.x - self.target_pos).abs() < 0.1 {
             self.stand_timer -= delta_time;
             if self.stand_timer < 0.0 {
-                self.stand_timer = global_rng().gen_range(1.0..=5.0);
+                self.stand_timer = thread_rng().gen_range(1.0..=5.0);
                 self.target_pos =
-                    global_rng().gen_range(-screen_size.x + 1.0..=screen_size.x - 1.0);
+                    thread_rng().gen_range(-screen_size.x + 1.0..=screen_size.x - 1.0);
             }
         }
 
@@ -130,15 +130,15 @@ pub struct State {
     geng: Geng,
     assets: Assets,
     camera: geng::Camera2d,
-    framebuffer_size: Vec2<f32>,
+    framebuffer_size: vec2<f32>,
     time: f32,
     crabs: HashMap<String, Crab>,
     farticles: Vec<Farticle>,
     connection: Connection,
-    bounce_points: Vec<Vec2<f32>>,
+    bounce_points: Vec<vec2<f32>>,
     bouncy_game: bool,
     breakout: bool,
-    bricks: Vec<AABB<f32>>,
+    bricks: Vec<Aabb2<f32>>,
     win_timer: f32,
     grid_size: i32,
 }
@@ -172,7 +172,7 @@ impl Feature for State {
             geng,
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
-                center: Vec2::ZERO,
+                center: vec2::ZERO,
                 rotation: 0.0,
                 fov: 20.0,
             },
@@ -197,7 +197,7 @@ impl Feature for State {
                 for x in -self.grid_size..self.grid_size {
                     for y in -self.grid_size..self.grid_size {
                         self.bricks.push(
-                            AABB::point(Vec2::ZERO)
+                            Aabb2::point(vec2::ZERO)
                                 .extend_positive(brick_size)
                                 .translate(vec2(x as f32, y as f32) * brick_size),
                         );
@@ -216,7 +216,7 @@ impl Feature for State {
                     if pen > 0.0 {
                         let n = delta_pos.normalize_or_zero();
                         crab.pos += n * pen;
-                        crab.vel -= n * Vec2::dot(n, crab.vel);
+                        crab.vel -= n * vec2::dot(n, crab.vel);
                         crab.vel += n * 10.0;
                     }
                 }
@@ -225,17 +225,17 @@ impl Feature for State {
             if self.breakout {
                 let mut destroyed = Vec::new();
                 for (i, &p) in self.bricks.iter().enumerate() {
-                    let dx = if crab.pos.x < p.x_min {
-                        crab.pos.x - p.x_min
-                    } else if crab.pos.x > p.x_max {
-                        crab.pos.x - p.x_max
+                    let dx = if crab.pos.x < p.min.x {
+                        crab.pos.x - p.min.x
+                    } else if crab.pos.x > p.max.x {
+                        crab.pos.x - p.max.x
                     } else {
                         0.0
                     };
-                    let dy = if crab.pos.y < p.y_min {
-                        crab.pos.y - p.y_min
-                    } else if crab.pos.y > p.y_max {
-                        crab.pos.y - p.y_max
+                    let dy = if crab.pos.y < p.min.y {
+                        crab.pos.y - p.min.y
+                    } else if crab.pos.y > p.max.y {
+                        crab.pos.y - p.max.y
                     } else {
                         0.0
                     };
@@ -244,7 +244,7 @@ impl Feature for State {
                     if pen > 0.0 {
                         let n = delta_pos.normalize_or_zero();
                         crab.pos += n * pen;
-                        crab.vel -= n * Vec2::dot(n, crab.vel);
+                        crab.vel -= n * vec2::dot(n, crab.vel);
                         crab.vel += n * 10.0;
                         destroyed.push(i);
                         crab.score += 1;
@@ -260,23 +260,23 @@ impl Feature for State {
                 if crab.fart_timer < 0.0 {
                     crab.fart_timer = 0.5;
                     crab.farts -= 1;
-                    self.assets.fart.choose(&mut global_rng()).unwrap().play();
+                    self.assets.fart.choose(&mut thread_rng()).unwrap().play();
                     for _ in 0..20 {
                         self.farticles.push(Farticle {
                             size: 0.5,
                             pos: crab.pos
                                 + vec2(
-                                    global_rng().gen_range(-1.0..1.0),
-                                    global_rng().gen_range(-1.0..1.0),
+                                    thread_rng().gen_range(-1.0..1.0),
+                                    thread_rng().gen_range(-1.0..1.0),
                                 ) * 0.5,
                             vel: crab.vel
                                 + vec2(
-                                    global_rng().gen_range(-1.0..1.0),
-                                    global_rng().gen_range(-1.0..1.0),
+                                    thread_rng().gen_range(-1.0..1.0),
+                                    thread_rng().gen_range(-1.0..1.0),
                                 ) * 0.5,
                             color: self.assets.config.fart_color,
-                            rot: global_rng().gen_range(0.0..2.0 * f32::PI),
-                            w: global_rng().gen_range(-1.0..1.0) * 3.0,
+                            rot: thread_rng().gen_range(0.0..2.0 * f32::PI),
+                            w: thread_rng().gen_range(-1.0..1.0) * 3.0,
                             t: 1.0,
                         });
                     }
@@ -322,7 +322,7 @@ impl Feature for State {
                         .and_then(|name| self.assets.custom.get(name))
                         .unwrap_or(&self.assets.crab),
                 )
-                .transform(Mat3::rotate(y * 0.1 * mov))
+                .transform(mat3::rotate(y * 0.1 * mov))
                 .translate(crab.pos + vec2(0.0, y.abs() * 0.1 * mov)),
             );
             font.draw_with_outline(
@@ -427,7 +427,7 @@ impl Feature for State {
                         ..farticle.color
                     },
                 )
-                .transform(Mat3::rotate(farticle.rot))
+                .transform(mat3::rotate(farticle.rot))
                 .scale_uniform(farticle.size)
                 .translate(farticle.pos),
             )
@@ -549,7 +549,7 @@ impl Feature for State {
                 }
                 "!drop" if self.bouncy_game => {
                     crab.pos = vec2(
-                        global_rng().gen_range(-10.0..10.0),
+                        thread_rng().gen_range(-10.0..10.0),
                         self.camera.fov / 2.0 + 1.0,
                     );
                 }

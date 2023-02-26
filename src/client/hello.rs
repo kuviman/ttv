@@ -26,7 +26,7 @@ impl Feature for State {
             assets: geng::LoadAsset::load(&geng, &assets_path).await.unwrap(),
             font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
             camera: geng::Camera2d {
-                center: Vec2::ZERO,
+                center: vec2::ZERO,
                 rotation: 0.0,
                 fov: 10.0,
             },
@@ -51,7 +51,7 @@ impl Feature for State {
             framebuffer,
             &self.camera,
             &draw_2d::TexturedQuad::new(
-                AABB::point(vec2(x, y - 2.0 * (self.time - 1.0).abs().sqr())).extend_uniform(1.0),
+                Aabb2::point(vec2(x, y - 2.0 * (self.time - 1.0).abs().sqr())).extend_uniform(1.0),
                 &self.assets.crab,
             ),
         );
@@ -76,7 +76,7 @@ impl Feature for State {
         if reward != "Hello" {
             return;
         }
-        self.assets.sound.choose(&mut global_rng()).unwrap().play();
+        self.assets.sound.choose(&mut thread_rng()).unwrap().play();
         self.time = 0.0;
         self.name = name.clone();
     }

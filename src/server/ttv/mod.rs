@@ -191,7 +191,7 @@ fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Messa
         .unwrap();
         let mut timer = Timer::new();
         loop {
-            if timer.elapsed() > 60.0 {
+            if timer.elapsed().as_secs_f64() > 60.0 {
                 debug!("Sending ping to pubsub");
                 ws.send(websocket_lite::Message::text(r#"{"type": "PING"}"#))
                     .await

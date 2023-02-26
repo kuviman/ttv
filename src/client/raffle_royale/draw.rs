@@ -70,10 +70,10 @@ impl State {
                 framebuffer,
                 &self.camera,
                 &draw_2d::TexturedQuad::new(
-                    AABB::point(vec2(0.0, 0.0)).extend_uniform(1.0),
+                    Aabb2::point(vec2(0.0, 0.0)).extend_uniform(1.0),
                     &self.assets.fireball,
                 )
-                .transform(Mat3::rotate(v.arg()))
+                .transform(mat3::rotate(v.arg()))
                 .translate(attacker.position + v * t),
             );
         }
@@ -103,7 +103,7 @@ impl State {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::new(
-                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.custom[custom],
                     ),
                 );
@@ -112,7 +112,7 @@ impl State {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::new(
-                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.face[&guy.skin.face],
                     ),
                 );
@@ -120,7 +120,7 @@ impl State {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::colored(
-                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.hat[&guy.skin.hat],
                         guy.skin.outfit_color,
                     ),
@@ -129,7 +129,7 @@ impl State {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::colored(
-                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.robe[&guy.skin.robe],
                         guy.skin.outfit_color,
                     ),
@@ -138,7 +138,7 @@ impl State {
                     framebuffer,
                     &self.camera,
                     &geng::draw_2d::TexturedQuad::colored(
-                        AABB::point(guy.position).extend_uniform(State::GUY_RADIUS),
+                        Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.beard[&guy.skin.beard],
                         self.assets.constants.beard_color,
                     ),
@@ -153,7 +153,7 @@ impl State {
                     self.camera.clone()
                 } else {
                     geng::Camera2d {
-                        center: Vec2::ZERO,
+                        center: vec2::ZERO,
                         rotation: 0.0,
                         fov: 20.0_f32.max(self.camera.fov * 0.6),
                     }
@@ -162,7 +162,7 @@ impl State {
                     label_camera.screen_to_world(self.framebuffer_size.map(|x| x as f32), pos);
 
                 let hp_bar_aabb =
-                    AABB::point(pos + vec2(0.0, 0.2)).extend_symmetric(vec2(1.4, 0.2));
+                    Aabb2::point(pos + vec2(0.0, 0.2)).extend_symmetric(vec2(1.4, 0.2));
                 self.geng.draw_2d(
                     framebuffer,
                     &label_camera,
@@ -177,10 +177,11 @@ impl State {
                     framebuffer,
                     &label_camera,
                     &draw_2d::Quad::new(
-                        AABB {
-                            x_max: hp_bar_aabb.x_min
-                                + hp_bar_aabb.width() * guy.health as f32 / guy.max_health as f32,
-                            ..hp_bar_aabb
+                        {
+                            let mut aabb = hp_bar_aabb;
+                            aabb.max.x = hp_bar_aabb.min.x
+                                + hp_bar_aabb.width() * guy.health as f32 / guy.max_health as f32;
+                            aabb
                         },
                         Rgba::GREEN,
                     ),
@@ -197,7 +198,7 @@ impl State {
                     .fit_into(hp_bar_aabb.extend_uniform(-0.1)),
                 );
 
-                let name_aabb = AABB::point(pos + vec2(0.0, 0.8)).extend_symmetric(vec2(2.0, 0.2));
+                let name_aabb = Aabb2::point(pos + vec2(0.0, 0.8)).extend_symmetric(vec2(2.0, 0.2));
                 self.geng.draw_2d(
                     framebuffer,
                     &label_camera,
@@ -235,7 +236,7 @@ impl State {
         }
 
         let ui_camera = geng::Camera2d {
-            center: Vec2::ZERO,
+            center: vec2::ZERO,
             rotation: 0.0,
             fov: 15.0,
         };

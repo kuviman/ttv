@@ -67,7 +67,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Tex
     fn bounding_quad(&self) -> Quad<f32> {
         self.inner.bounding_quad()
     }
-    fn apply_transform(&mut self, transform: Mat3<f32>) {
+    fn apply_transform(&mut self, transform: mat3<f32>) {
         self.inner.apply_transform(transform)
     }
 }
@@ -78,15 +78,15 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_
         _geng: &Geng,
         framebuffer: &mut ugli::Framebuffer,
         camera: &dyn geng::AbstractCamera2d,
-        transform: Mat3<f32>,
+        transform: mat3<f32>,
     ) {
         let transform = transform * self.inner.transform * self.inner.into_unit_transform;
         let size = 1000.0;
-        let transform = transform * Mat3::scale_uniform(size);
-        self.inner
-            .font
-            .borrow()
-            .draw_with(self.inner.text.as_ref(), |glyphs, texture| {
+        let transform = transform * mat3::scale_uniform(size);
+        self.inner.font.borrow().draw_with(
+            self.inner.text.as_ref(),
+            vec2(geng::TextAlign::LEFT, geng::TextAlign::LEFT),
+            |glyphs, texture| {
                 let framebuffer_size = framebuffer.size();
                 ugli::draw(
                     framebuffer,
@@ -96,7 +96,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_
                     ugli::instanced(
                         &ugli::VertexBuffer::new_dynamic(
                             self.geng.ugli(),
-                            AABB::point(Vec2::ZERO)
+                            Aabb2::point(vec2::ZERO)
                                 .extend_positive(vec2(1.0, 1.0))
                                 .corners()
                                 .into_iter()
@@ -116,10 +116,11 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_
                     ),
                     ugli::DrawParameters {
                         depth_func: None,
-                        blend_mode: Some(ugli::BlendMode::default()),
+                        blend_mode: Some(ugli::BlendMode::straight_alpha()),
                         ..default()
                     },
                 );
-            });
+            },
+        );
     }
 }

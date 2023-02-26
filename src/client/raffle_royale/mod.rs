@@ -23,8 +23,8 @@ struct Guy {
     name: String,
     health: usize,
     max_health: usize,
-    velocity: Vec2<f32>,
-    position: Vec2<f32>,
+    velocity: vec2<f32>,
+    position: vec2<f32>,
     skin: Skin,
     spawn: f32,
     should_never_win: bool,
@@ -37,7 +37,7 @@ struct Attack {
 }
 
 struct Circle {
-    center: Vec2<f32>,
+    center: vec2<f32>,
     radius: f32,
 }
 
@@ -48,7 +48,7 @@ struct DelayedMessage {
 
 struct BackgroundEntity {
     texture_index: usize,
-    position: Vec2<f32>,
+    position: vec2<f32>,
     color: Rgba<f32>,
 }
 
@@ -66,7 +66,7 @@ pub struct State {
     // config: Config,
     guys: Collection<Guy>,
     camera: geng::Camera2d,
-    framebuffer_size: Vec2<usize>,
+    framebuffer_size: vec2<usize>,
     next_id: Id,
     process_battle: bool,
     winning_screen: bool,
@@ -93,7 +93,7 @@ pub struct State {
 }
 
 struct Effect {
-    pos: Vec2<f32>,
+    pos: vec2<f32>,
     offset: f32,
     size: f32,
     scale_up: f32,
@@ -149,7 +149,7 @@ impl State {
             assets: assets.clone(),
             guys: default(),
             camera: geng::Camera2d {
-                center: Vec2::ZERO,
+                center: vec2::ZERO,
                 rotation: 0.0,
                 fov: 50.0,
             },
@@ -159,7 +159,7 @@ impl State {
             attacks: vec![],
             queued_attack: None,
             circle: Circle {
-                center: Vec2::ZERO,
+                center: vec2::ZERO,
                 radius: 1.0,
             },
             // ttv_client,
@@ -175,12 +175,12 @@ impl State {
             background_entities: std::iter::from_fn(|| {
                 let d = 50.0;
                 Some(BackgroundEntity {
-                    texture_index: global_rng().gen_range(0..assets.background_entities.len()),
-                    position: vec2(global_rng().gen_range(-d..d), global_rng().gen_range(-d..d)),
+                    texture_index: thread_rng().gen_range(0..assets.background_entities.len()),
+                    position: vec2(thread_rng().gen_range(-d..d), thread_rng().gen_range(-d..d)),
                     color: *assets
                         .constants
                         .background_palette
-                        .choose(&mut global_rng())
+                        .choose(&mut thread_rng())
                         .unwrap(),
                 })
             })
@@ -193,7 +193,7 @@ impl State {
     }
 
     fn find_circle(&self) -> Option<Circle> {
-        let mut sum = Vec2::ZERO;
+        let mut sum = vec2::ZERO;
         let mut sum_spawns = 0.0;
         for guy in &self.guys {
             sum += guy.position * guy.spawn;
@@ -406,10 +406,10 @@ impl Feature for State {
             geng::Event::KeyDown { key } => match key {
                 geng::Key::S => {
                     self.spawn_guy(
-                        global_rng()
+                        thread_rng()
                             .sample_iter(rand::distributions::Alphanumeric)
                             .map(|c| c as char)
-                            .take(global_rng().gen_range(5..=15))
+                            .take(thread_rng().gen_range(5..=15))
                             .collect(),
                         true,
                     )

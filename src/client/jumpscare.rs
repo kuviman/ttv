@@ -37,12 +37,12 @@ impl Feature for State {
         self.geng.draw_2d(
             framebuffer,
             &geng::Camera2d {
-                center: Vec2::ZERO,
+                center: vec2::ZERO,
                 rotation: 0.0,
                 fov: 10.0,
             },
             &draw_2d::TexturedQuad::new(
-                AABB::point(Vec2::ZERO).extend_uniform(5.0),
+                Aabb2::point(vec2::ZERO).extend_uniform(5.0),
                 &self.assets.yeti,
             ),
         );

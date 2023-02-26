@@ -38,8 +38,9 @@ pub async fn authenticate(
     // in the fragment portion of the URI). If this string doesn’t match the
     // state string that you passed, ignore the response. The state string
     // should be randomly generated and unique for each OAuth request.
+    use rand::distributions::Distribution;
     let state: String = rand::distributions::Alphanumeric
-        .sample_iter(global_rng())
+        .sample_iter(thread_rng())
         .take(16)
         .map(|c| c as char)
         .collect();
