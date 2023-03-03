@@ -3,6 +3,10 @@ name = "ttv"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+serve = []
+
 [dependencies]
 geng = { git = "https://github.com/kuviman/geng" }
 serde = "1"

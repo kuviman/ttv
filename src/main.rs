@@ -33,6 +33,8 @@ struct Opt {
     pub server: Option<String>,
     #[clap(long)]
     pub connect: Option<String>,
+    #[clap(long)]
+    pub serve: Option<std::path::PathBuf>,
 }
 
 fn main() {
@@ -57,13 +59,13 @@ fn main() {
 
     if opt.server.is_some() && opt.connect.is_none() {
         #[cfg(not(target_arch = "wasm32"))]
-        server::run(opt.server.as_deref().unwrap());
+        server::run(opt.server.as_deref().unwrap(), opt.serve.as_deref());
     } else {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(addr) = &opt.server {
             let addr = addr.to_owned();
             std::thread::spawn(move || {
-                server::run(&addr);
+                server::run(&addr, opt.serve.as_deref());
             });
         }
         client::run(opt.connect.as_deref().unwrap());
