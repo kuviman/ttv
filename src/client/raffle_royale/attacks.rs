@@ -15,7 +15,7 @@ impl State {
                             guy.health -= 1;
                         }
                     } else {
-                        // TODO
+                        // TODO missing animation
                     }
                 }
                 for guy in &self.guys {

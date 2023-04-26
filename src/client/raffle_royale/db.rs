@@ -50,4 +50,9 @@ impl Db {
             .await
             .unwrap_or(false)
     }
+
+    pub fn set_game_played(&self, name: &str, played: bool) {
+        self.connection
+            .set_key_value(&format!("raffle_royale/{name}/game_played"), &played);
+    }
 }

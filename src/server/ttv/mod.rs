@@ -122,16 +122,13 @@ impl Client {
         self.messages.try_recv().ok()
     }
 
-    pub fn say(&self, message: &str) {
-        futures::executor::block_on(
-            self.inner
-                .say(self.channel_login.clone(), message.to_owned()),
-        )
+    pub fn say(&self, message: &str, reply_to: Option<String>) {
+        futures::executor::block_on(self.inner.say_in_response(
+            self.channel_login.clone(),
+            message.to_owned(),
+            reply_to,
+        ))
         .unwrap();
-    }
-
-    pub fn reply(&self, message: &str, to: &PrivmsgMessage) {
-        futures::executor::block_on(self.inner.reply_to_privmsg(message.to_owned(), to)).unwrap();
     }
 }
 

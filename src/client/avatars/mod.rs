@@ -500,7 +500,12 @@ impl Feature for State {
         }
     }
     async fn handle(&mut self, message: &ServerMessage) {
-        if let ServerMessage::ChatMessage { name, message } = message {
+        if let ServerMessage::ChatMessage {
+            id: _,
+            name,
+            message,
+        } = message
+        {
             let parts: Vec<&str> = message.split_whitespace().collect();
             if name == "kuviman" {
                 if parts.first() == Some(&"!setavatar") && parts.len() == 3 {

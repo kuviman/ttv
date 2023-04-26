@@ -42,10 +42,14 @@ impl Connection {
     fn say(&self, text: &str) {
         self.inner.lock().unwrap().send(ClientMessage::Say {
             text: text.to_owned(),
+            reply_to: None,
         });
     }
-    fn reply(&self, text: &str, to: &str) {
-        self.say(text);
+    fn reply(&self, text: &str, to: &MessageId) {
+        self.inner.lock().unwrap().send(ClientMessage::Say {
+            text: text.to_owned(),
+            reply_to: Some(to.clone()),
+        });
     }
     async fn get_key_value<T: serde::de::DeserializeOwned>(&self, key: &str) -> Option<T> {
         let request_id: String = thread_rng()
@@ -100,7 +104,7 @@ impl SyncFeature {
                 .boxed_local(),
             );
         } else {
-            // TODO
+            // TODO i dont remember what i wanted to do here LUL
         }
     }
     fn update(&mut self, delta_time: f32) {
@@ -170,6 +174,8 @@ impl Overlay {
                 }
             } else {
                 ServerMessage::ChatMessage {
+                    // TODO: rig it so badcop always wins
+                    id: MessageId("<fake id>".to_owned()),
                     name: "kuviman".to_owned(),
                     message: line.to_owned(),
                 }

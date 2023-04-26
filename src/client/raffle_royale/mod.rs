@@ -110,7 +110,7 @@ struct Effect {
 impl Drop for State {
     fn drop(&mut self) {
         // if !self.opt.no_chat_spam {
-        //     self.ttv_client.say("Going to sleep 💤");
+        self.connection.say("Going to sleep 💤");
         // }
     }
 }
@@ -130,7 +130,7 @@ impl State {
         // opt: Opt,
     ) -> Self {
         // if !opt.no_chat_spam {
-        //     ttv_client.say("Hai, im online 🤖");
+        connection.say("Hai, im online 🤖");
         // }
         let mut lobby_music = assets.lobby_music.effect();
         lobby_music.set_volume(0.0);
@@ -221,14 +221,14 @@ impl State {
 
     fn start_raffle(&mut self, mode: RaffleMode) {
         if !self.idle {
-            // self.ttv_client.say("Raffle Royale is already going on 😕");
+            self.connection.say("Raffle Royale is already going on 😕");
             return;
         }
         // if !self.opt.no_chat_spam {
-        // self.ttv_client.say(&format!(
-        //     "🧙‍♀️ Raffle Royale is about to begin! Type !{} to join! 🧙‍♂️",
-        //     self.raffle_keyword
-        // ));
+        self.connection.say(&format!(
+            "🧙‍♀️ Raffle Royale is about to begin! Type !{} to join! 🧙‍♂️",
+            self.raffle_keyword
+        ));
         // }
         self.idle = false;
         self.guys.clear();
@@ -236,7 +236,7 @@ impl State {
         self.next_attack = None;
         self.queued_attack = None;
         let mut sfx = self.assets.title_sfx.effect();
-        sfx.set_volume((self.volume * 3.0).clamp(0.0, 1.0)); // TODO ???
+        sfx.set_volume((self.volume * 3.0).clamp(0.0, 1.0)); // TODO ?????
         sfx.play();
         self.raffle_mode = mode;
     }
@@ -254,7 +254,7 @@ impl State {
         }
         skin
     }
-    fn update_impl(&mut self, delta_time: f32) {
+    async fn update_impl(&mut self, delta_time: f32) {
         if self.geng.window().is_key_pressed(geng::Key::PageUp) {
             self.volume = (self.volume + delta_time as f64).min(1.0);
         }
@@ -311,7 +311,7 @@ impl State {
         self.time += delta_time;
         for message in &self.delayed_messages {
             if message.time <= self.time {
-                // TODO: self.ttv_client.say(&message.message);
+                self.connection.say(&message.message);
             }
         }
         self.delayed_messages
@@ -340,6 +340,56 @@ impl State {
         // while let Some(message) = self.ttv_client.next_message() {
         //     self.handle_ttv(message);
         // }
+
+        if self.guys.len() == 1 && !self.winning_screen {
+            let winner = self.guys.iter().next().unwrap();
+            if true {
+                // TODO !self.opt.no_chat_spam {
+                match self.raffle_mode {
+                    RaffleMode::Regular => {
+                        self.delayed_messages.push(DelayedMessage {
+                            time: self.time + 5.0,
+                            message: format!("Winner is {} 🎉", winner.name),
+                        });
+                    }
+                    RaffleMode::Ld => match self.db.find_game_link(&winner.name).await {
+                        Some(game_link) => {
+                            if self.db.game_played(&winner.name).await {
+                                self.delayed_messages.push(DelayedMessage {
+                                        time: self.time + 5.0,
+                                        message: format!(
+                                            "Winner is {} 🎉 Your game ({}) was already played, please stop cheating?? 👀", 
+                                            winner.name, game_link
+                                        ),
+                                    });
+                            } else {
+                                self.db.set_game_played(&winner.name, true);
+                                self.delayed_messages.push(DelayedMessage {
+                                    time: self.time + 5.0,
+                                    message: format!(
+                                        "Winner is {} 🎉 Now we play {} 👏",
+                                        winner.name, game_link
+                                    ),
+                                });
+                            }
+                        }
+                        None => {
+                            self.delayed_messages.push(DelayedMessage {
+                                time: self.time + 5.0,
+                                message: format!(
+                                    "Winner is {} 🎉 No game was submitted? 😔",
+                                    winner.name
+                                ),
+                            });
+                        }
+                    },
+                }
+            }
+            self.winning_screen = true;
+            let mut sound_effect = self.assets.win_sfx.effect();
+            sound_effect.set_volume(self.volume);
+            sound_effect.play();
+        }
     }
 }
 
@@ -444,7 +494,7 @@ impl Feature for State {
         }
     }
     async fn update(&mut self, delta_time: f32) {
-        self.update_impl(delta_time);
+        self.update_impl(delta_time).await;
     }
 
     async fn load(geng: Geng, assets_path: std::path::PathBuf, connection: Connection) -> Self

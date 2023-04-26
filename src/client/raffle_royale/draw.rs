@@ -324,55 +324,6 @@ impl State {
             );
         } else if self.guys.len() == 1 {
             let winner = self.guys.iter().next().unwrap();
-            if !self.winning_screen {
-                // TODO
-                #[cfg(feature = "false")]
-                if !self.opt.no_chat_spam {
-                    match self.raffle_mode {
-                        RaffleMode::Regular => {
-                            self.delayed_messages.push(DelayedMessage {
-                                time: self.time + 5.0,
-                                message: format!("Winner is {} 🎉", winner.name),
-                            });
-                        }
-                        RaffleMode::Ld => match self.db.find_game_link(&winner.name) {
-                            Some(game_link) => {
-                                if self.db.game_played(&winner.name) {
-                                    self.delayed_messages.push(DelayedMessage {
-                                        time: self.time + 5.0,
-                                        message: format!(
-                                            "Winner is {} 🎉 Your game ({}) was already played, please stop cheating?? 👀", 
-                                            winner.name, game_link
-                                        ),
-                                    });
-                                } else {
-                                    self.db.set_game_played(&winner.name, true);
-                                    self.delayed_messages.push(DelayedMessage {
-                                        time: self.time + 5.0,
-                                        message: format!(
-                                            "Winner is {} 🎉 Now we play {} 👏",
-                                            winner.name, game_link
-                                        ),
-                                    });
-                                }
-                            }
-                            None => {
-                                self.delayed_messages.push(DelayedMessage {
-                                    time: self.time + 5.0,
-                                    message: format!(
-                                        "Winner is {} 🎉 No game was submitted? 😔",
-                                        winner.name
-                                    ),
-                                });
-                            }
-                        },
-                    }
-                }
-                self.winning_screen = true;
-                let mut sound_effect = self.assets.win_sfx.effect();
-                sound_effect.set_volume(self.volume);
-                sound_effect.play();
-            }
             self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,

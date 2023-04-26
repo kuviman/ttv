@@ -36,11 +36,12 @@ impl Bot {
                 }
                 log::info!("{}", message_text);
                 match message_text.trim() {
-                    "!gnbadcop" => self.ttv_client.say("Good Night badcop_ rincsDance"),
-                    "🦀" => self.ttv_client.say("🦀✅🦀✅🦀✅🦀✅🦀✅🦀✅🦀"),
+                    "!gnbadcop" => self.ttv_client.say("Good Night badcop_ rincsDance", None),
+                    "🦀" => self.ttv_client.say("🦀✅🦀✅🦀✅🦀✅🦀✅🦀✅🦀", None),
                     _ => {}
                 }
                 self.sender.broadcast(ServerMessage::ChatMessage {
+                    id: MessageId(message.message_id.clone()),
                     name: name.to_owned(),
                     message: message_text.to_owned(),
                 });
@@ -58,8 +59,8 @@ impl Bot {
                 self.handle_ttv(msg);
             }
             for msg in self.receiver.try_iter() {
-                if let ClientMessage::Say { text } = msg {
-                    self.ttv_client.say(&text);
+                if let ClientMessage::Say { text, reply_to } = msg {
+                    self.ttv_client.say(&text, reply_to.map(|id| id.0));
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(100));

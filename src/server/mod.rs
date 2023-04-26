@@ -62,7 +62,7 @@ pub fn run(addr: &str, serve_path: Option<&std::path::Path>) {
                     let value = match std::fs::File::open(key_file_path(&key)) {
                         Ok(mut file) => {
                             let mut result = String::new();
-                            file.read_to_string(&mut result);
+                            file.read_to_string(&mut result).unwrap();
                             Some(result)
                         }
                         Err(e) => None,
@@ -80,8 +80,10 @@ pub fn run(addr: &str, serve_path: Option<&std::path::Path>) {
                         .write_all(value.as_bytes())
                         .unwrap();
                 }
-                ClientMessage::Say { text } => {
-                    self.bot_sender.send(ClientMessage::Say { text });
+                ClientMessage::Say { text, reply_to } => {
+                    self.bot_sender
+                        .send(ClientMessage::Say { text, reply_to })
+                        .unwrap();
                 }
             }
         }

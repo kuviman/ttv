@@ -3,7 +3,11 @@ use super::*;
 impl State {
     pub async fn handle_message(&mut self, message: ServerMessage) {
         match message {
-            ServerMessage::ChatMessage { name, message } => {
+            ServerMessage::ChatMessage {
+                id: message_id,
+                name,
+                message,
+            } => {
                 let mut name = name.as_str();
                 let mut message_text = message.as_str();
                 if name == "kuviman" {
@@ -18,29 +22,24 @@ impl State {
                     let url = url.trim();
                     if url.is_empty() {
                         self.connection
-                            .reply("Submit using !submit <url> 🔗", &message);
+                            .reply("Submit using !submit <url> 🔗", &message_id);
+                    } else if self.db.game_played(name).await {
+                        self.connection
+                            .reply("We have already played your game 😕", &message_id);
+                    } else if self.db.find_game_link(name).await.is_some() {
+                        self.connection
+                            .reply("You have already submitted a game tho 😕", &message_id);
                     } else {
-                        if self.db.game_played(name).await {
-                            self.connection
-                                .reply("We have already played your game 😕", &message);
-                        } else {
-                            if self.db.find_game_link(name).await.is_some() {
-                                self.connection
-                                    .reply("You have already submitted a game tho 😕", &message);
-                            } else {
-                                self.db.set_game_link(name, Some(url));
+                        self.db.set_game_link(name, Some(url));
 
-                                let mut text = "Submission successful 👌".to_owned();
-                                if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name)
-                                {
-                                    if guy.should_never_win {
-                                        guy.should_never_win = false;
-                                        text += " Your curse has been reversed";
-                                    }
-                                }
-                                self.connection.reply(&text, &message);
+                        let mut text = "Submission successful 👌".to_owned();
+                        if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
+                            if guy.should_never_win {
+                                guy.should_never_win = false;
+                                text += " Your curse has been reversed";
                             }
                         }
+                        self.connection.reply(&text, &message_id);
                     }
                 }
                 if let Some(hat) = message_text.strip_prefix("!hat") {
@@ -64,7 +63,7 @@ impl State {
                                     .collect::<Vec<_>>()
                                     .join(", ")
                             ),
-                            &message,
+                            &message_id,
                         );
                     }
                 }
@@ -108,7 +107,7 @@ impl State {
                                     .collect::<Vec<_>>()
                                     .join(", ")
                             ),
-                            &message,
+                            &message_id,
                         );
                     }
                 }
@@ -133,7 +132,7 @@ impl State {
                                     .collect::<Vec<_>>()
                                     .join(", ")
                             ),
-                            &message,
+                            &message_id,
                         );
                     }
                 }
@@ -158,23 +157,23 @@ impl State {
                                     .collect::<Vec<_>>()
                                     .join(", ")
                             ),
-                            &message,
+                            &message_id,
                         );
                     }
                 }
                 if message_text.trim() == format!("!{}", self.raffle_keyword) {
                     if self.idle {
                         self.connection
-                            .reply("You are either too late or too early 😊", &message);
+                            .reply("You are either too late or too early 😊", &message_id);
                     } else if !self.process_battle {
                         if self.guys.iter().any(|guy| guy.name == name) {
-                            self.connection.reply("No cheating allowed 🚫", &message);
+                            self.connection.reply("No cheating allowed 🚫", &message_id);
                         } else {
                             self.spawn_guy(name.to_owned(), false).await;
                             if self.raffle_mode == RaffleMode::Ld
                                 && self.db.find_game_link(name).await.is_none()
                             {
-                                self.connection.reply("You didn't !submit a game so you are cursed. Submit to reverse it ⏳", &message);
+                                self.connection.reply("You didn't !submit a game so you are cursed. Submit to reverse it ⏳", &message_id);
                             }
 
                             // if self.raffle_mode == RaffleMode::Ld
@@ -194,7 +193,7 @@ impl State {
                     } else {
                         self.connection.reply(
                             "You can't join into an ongoing fight, sorry Kappa",
-                            &message,
+                            &message_id,
                         );
                     }
                 }
@@ -263,12 +262,14 @@ impl State {
                     "!lvl" | "!level" => {
                         let level = self.db.find_level(&name).await;
                         let hp = level * self.assets.constants.health_per_level;
-                        self.connection
-                            .reply(&format!("You are level {} ({} hp) ⭐", level, hp), &message);
+                        self.connection.reply(
+                            &format!("You are level {} ({} hp) ⭐", level, hp),
+                            &message_id,
+                        );
                     }
                     "!skin" => {
                         let skin = self.find_skin(name, true).await;
-                        self.connection.reply(&skin.to_string(), &message);
+                        self.connection.reply(&skin.to_string(), &message_id);
                     }
                     "!skin random" => {
                         let skin = Skin::random(&self.assets);

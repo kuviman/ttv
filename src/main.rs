@@ -7,6 +7,7 @@ mod server;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ServerMessage {
     ChatMessage {
+        id: MessageId,
         name: String,
         message: String,
     },
@@ -21,10 +22,22 @@ pub enum ServerMessage {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MessageId(String);
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ClientMessage {
-    Say { text: String },
-    GetKeyValue { request_id: String, key: String },
-    SetKeyValue { key: String, value: String },
+    Say {
+        text: String,
+        reply_to: Option<MessageId>,
+    },
+    GetKeyValue {
+        request_id: String,
+        key: String,
+    },
+    SetKeyValue {
+        key: String,
+        value: String,
+    },
 }
 
 #[derive(clap::Parser)]
