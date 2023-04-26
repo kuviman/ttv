@@ -353,24 +353,22 @@ impl State {
                 .scale_uniform(0.5)
                 .translate(vec2(0.0, 2.5)),
             );
-        } else {
-            if let Some(feed) = &self.feed {
-                self.geng.default_font().draw(
-                    framebuffer,
-                    &ui_camera,
-                    feed,
-                    vec2::splat(geng::TextAlign::CENTER),
-                    mat3::translate(vec2(0.0, 6.0)),
-                    Rgba::BLACK,
-                );
-                // self.geng.draw2d().draw2d(
-                //     framebuffer,
-                //     &ui_camera,
-                //     &draw2d::Text::unit(&**self.geng.default_font(), feed, Rgba::BLACK)
-                //         .scale_uniform(0.5)
-                //         .translate(vec2(0.0, 6.0)),
-                // );
-            }
+        } else if let Some(feed) = &self.feed {
+            self.geng.default_font().draw(
+                framebuffer,
+                &ui_camera,
+                feed,
+                vec2::splat(geng::TextAlign::CENTER),
+                mat3::translate(vec2(0.0, 6.0)),
+                Rgba::BLACK,
+            );
+            // self.geng.draw2d().draw2d(
+            //     framebuffer,
+            //     &ui_camera,
+            //     &draw2d::Text::unit(&**self.geng.default_font(), feed, Rgba::BLACK)
+            //         .scale_uniform(0.5)
+            //         .translate(vec2(0.0, 6.0)),
+            // );
         }
     }
 }
