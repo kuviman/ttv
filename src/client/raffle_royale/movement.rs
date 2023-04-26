@@ -14,8 +14,10 @@ impl State {
             let mut guy = self.guys.remove(id).unwrap();
             let mut target_velocity =
                 (center - guy.position).normalize_or_zero() * State::GUY_MAX_SPEED;
-            target_velocity += target_velocity.rotate_90()
-                * self.noise.get([guy.id as f64, self.time as f64]) as f32;
+            if self.process_battle {
+                target_velocity += target_velocity.rotate_90()
+                    * self.noise.get([guy.id as f64, self.time as f64]) as f32;
+            }
             guy.velocity +=
                 (target_velocity - guy.velocity).clamp_len(..=State::GUY_ACCELERATION * delta_time);
             self.guys.insert(guy);
@@ -34,8 +36,13 @@ impl State {
                     let delta_pos = guy.position - other.position;
                     let len = delta_pos.len();
                     let v = delta_pos.normalize_or_zero();
-                    if len < State::MIN_DISTANCE {
-                        moves.push((guy.id, v * (State::MIN_DISTANCE - len) / 2.0));
+                    let min_distance = if self.process_battle {
+                        State::MIN_DISTANCE
+                    } else {
+                        State::PREFERRED_DISTANCE
+                    };
+                    if len < min_distance {
+                        moves.push((guy.id, v * (min_distance - len) / 2.0));
                         guy.velocity -= v * vec2::dot(guy.velocity, v);
                     } else if len < State::PREFERRED_DISTANCE {
                         guy.velocity += v
