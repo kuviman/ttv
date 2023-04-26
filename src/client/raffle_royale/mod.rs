@@ -219,6 +219,15 @@ impl State {
         Some(Circle { center, radius })
     }
 
+    async fn levelup_all(&self) {
+        for guy in &self.guys {
+            let current_level = self.db.find_level(&guy.name).await;
+            if !guy.should_never_win {
+                self.db.set_level(&guy.name, current_level + 1);
+            }
+        }
+    }
+
     fn start_raffle(&mut self, mode: RaffleMode) {
         if !self.idle {
             self.connection.say("Raffle Royale is already going on 😕");
@@ -473,12 +482,7 @@ impl Feature for State {
                     if self.idle {
                         self.start_raffle(self.raffle_mode);
                     } else if !self.process_battle {
-                        for guy in &self.guys {
-                            let current_level = 1; // self.db.find_level(&guy.name);
-                            if !guy.should_never_win {
-                                // self.db.set_level(&guy.name, current_level + 1);
-                            }
-                        }
+                        self.levelup_all().await;
                         self.process_battle = true;
                     } else {
                         self.process_battle = false;

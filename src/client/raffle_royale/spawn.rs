@@ -2,15 +2,16 @@ use super::*;
 
 impl State {
     pub async fn spawn_guy(&mut self, name: String, random: bool) {
-        let level = 1; // self.db.find_level(&name);
+        let level = self.db.find_level(&name).await;
         let health = level * self.assets.constants.health_per_level;
         let id = self.next_id;
         self.next_id += 1;
         self.guys.insert(Guy {
             id,
-            should_never_win: random,
-            // || (self.raffle_mode == RaffleMode::Ld
-            //     && (self.db.game_played(&name) || self.db.find_game_link(&name).is_none())),
+            should_never_win: random
+                || (self.raffle_mode == RaffleMode::Ld
+                    && (self.db.game_played(&name).await
+                        || self.db.find_game_link(&name).await.is_none())),
             skin: self.find_skin(&name, !random).await,
             name,
             position: std::iter::from_fn(|| {

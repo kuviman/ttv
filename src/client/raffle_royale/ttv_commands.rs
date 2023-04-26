@@ -175,20 +175,6 @@ impl State {
                             {
                                 self.connection.reply("You didn't !submit a game so you are cursed. Submit to reverse it ⏳", &message_id);
                             }
-
-                            // if self.raffle_mode == RaffleMode::Ld
-                            //     && self.db.find_game_link(name).is_none()
-                            // {
-                            //     self.connection
-                            //         .reply("You should !submit first! ⏳", &message);
-                            // } else if self.raffle_mode == RaffleMode::Ld
-                            //     && self.db.game_played(name)
-                            // {
-                            //     // self.connection.reply("You shall not win", &message);
-                            //     self.spawn_guy(name.to_owned(), false);
-                            // } else {
-                            //     self.spawn_guy(name.to_owned(), false);
-                            // }
                         }
                     } else {
                         self.connection.reply(
@@ -204,6 +190,7 @@ impl State {
                             self.start_raffle(RaffleMode::Ld);
                         } else if keyword == "start" {
                             if !self.idle {
+                                self.levelup_all().await;
                                 self.process_battle = true;
                             }
                         } else if keyword == "close" {
