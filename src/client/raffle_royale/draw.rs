@@ -65,7 +65,10 @@ impl State {
                 Some(x) => x,
                 None => continue,
             };
-            let v = target.position - attacker.position;
+            let mut v = target.position - attacker.position;
+            if !attack.hit {
+                v = v.rotate(f32::PI / 6.0);
+            }
             self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,

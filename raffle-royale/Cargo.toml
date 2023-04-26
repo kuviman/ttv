@@ -1,0 +1,8 @@
+[package]
+name = "raffle-royale"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+batbox = { git = "https://github.com/kuviman/geng" }
+serde = "1"

@@ -10,8 +10,12 @@ impl State {
             *time -= delta_time * 3.0;
             if *time <= 0.0 {
                 for attack in self.attacks.drain(..) {
-                    if let Some(guy) = self.guys.get_mut(&attack.target_id) {
-                        guy.health -= 1;
+                    if attack.hit {
+                        if let Some(guy) = self.guys.get_mut(&attack.target_id) {
+                            guy.health -= 1;
+                        }
+                    } else {
+                        // TODO
                     }
                 }
                 for guy in &self.guys {
@@ -55,33 +59,37 @@ impl State {
                     healths.insert(guy.id, guy.health);
                 }
                 for attack in &self.attacks {
+                    if !attack.hit {
+                        continue;
+                    }
                     if let Some(health) = healths.get_mut(&attack.target_id) {
                         *health -= 1;
                     }
                 }
 
-                if self.guys.iter().any(|guy| !guy.should_never_win) {
-                    if !self
+                if self.guys.iter().any(|guy| !guy.should_never_win)
+                    && !self
                         .guys
                         .iter()
                         .any(|guy| !guy.should_never_win && healths[&guy.id] != 0)
-                    {
-                        self.attacks.clear();
-                        break 'schedule_attacks;
-                    }
+                {
+                    self.attacks.clear();
+                    break 'schedule_attacks;
                 }
 
                 if healths.values().filter(|health| **health == 0).count() != 0 {
                     break 'schedule_attacks;
                 }
 
-                let target = if let Ok(target) =
-                    guys.choose_weighted(&mut thread_rng(), |guy| healths[&guy.id])
-                {
-                    target
-                } else {
-                    break 'schedule_attacks;
-                };
+                let Some(target) = guys.choose(&mut thread_rng()) else { break 'schedule_attacks };
+                // let target = if let Ok(target) =
+                //     guys.choose_weighted(&mut thread_rng(), |guy| healths[&guy.id])
+                // {
+                //     target
+                // } else {
+                //     break 'schedule_attacks;
+                // };
+                // TODO: no the closest, but random in radius?
                 let attacker = if let Some(attacker) = guys
                     .iter()
                     .copied()
@@ -95,6 +103,11 @@ impl State {
                 Attack {
                     attacker_id: attacker.id,
                     target_id: target.id,
+                    hit: thread_rng().gen_bool(
+                        healths[&target.id] as f64
+                            / healths.values().copied().max().unwrap() as f64
+                            * (healths.values().copied().sum::<usize>() as f64 / 10.0).min(1.0),
+                    ),
                 }
             };
             if self

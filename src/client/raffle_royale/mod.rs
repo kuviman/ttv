@@ -34,6 +34,7 @@ struct Guy {
 struct Attack {
     attacker_id: Id,
     target_id: Id,
+    hit: bool,
 }
 
 struct Circle {
