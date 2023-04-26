@@ -292,6 +292,56 @@ impl State {
             self.battle_fade += delta_time;
             if self.guys.len() == 1 {
                 self.victory_fade = (self.victory_fade + delta_time).min(1.0);
+
+                if !self.winning_screen {
+                    let winner = self.guys.iter().next().unwrap();
+                    if true {
+                        // TODO !self.opt.no_chat_spam {
+                        match self.raffle_mode {
+                            RaffleMode::Regular => {
+                                self.delayed_messages.push(DelayedMessage {
+                                    time: self.time + 5.0,
+                                    message: format!("Winner is {} 🎉", winner.name),
+                                });
+                            }
+                            RaffleMode::Ld => match self.db.find_game_link(&winner.name).await {
+                                Some(game_link) => {
+                                    if self.db.game_played(&winner.name).await {
+                                        self.delayed_messages.push(DelayedMessage {
+                                        time: self.time + 5.0,
+                                        message: format!(
+                                            "Winner is {} 🎉 Your game ({}) was already played, please stop cheating?? 👀", 
+                                            winner.name, game_link
+                                        ),
+                                    });
+                                    } else {
+                                        self.db.set_game_played(&winner.name, true);
+                                        self.delayed_messages.push(DelayedMessage {
+                                            time: self.time + 5.0,
+                                            message: format!(
+                                                "Winner is {} 🎉 Now we play {} 👏",
+                                                winner.name, game_link
+                                            ),
+                                        });
+                                    }
+                                }
+                                None => {
+                                    self.delayed_messages.push(DelayedMessage {
+                                        time: self.time + 5.0,
+                                        message: format!(
+                                            "Winner is {} 🎉 No game was submitted? 😔",
+                                            winner.name
+                                        ),
+                                    });
+                                }
+                            },
+                        }
+                    }
+                    self.winning_screen = true;
+                    let mut sound_effect = self.assets.win_sfx.effect();
+                    sound_effect.set_volume(self.volume);
+                    sound_effect.play();
+                }
             }
         } else {
             self.victory_fade = 0.0;
@@ -340,56 +390,6 @@ impl State {
         // while let Some(message) = self.ttv_client.next_message() {
         //     self.handle_ttv(message);
         // }
-
-        if self.guys.len() == 1 && !self.winning_screen {
-            let winner = self.guys.iter().next().unwrap();
-            if true {
-                // TODO !self.opt.no_chat_spam {
-                match self.raffle_mode {
-                    RaffleMode::Regular => {
-                        self.delayed_messages.push(DelayedMessage {
-                            time: self.time + 5.0,
-                            message: format!("Winner is {} 🎉", winner.name),
-                        });
-                    }
-                    RaffleMode::Ld => match self.db.find_game_link(&winner.name).await {
-                        Some(game_link) => {
-                            if self.db.game_played(&winner.name).await {
-                                self.delayed_messages.push(DelayedMessage {
-                                        time: self.time + 5.0,
-                                        message: format!(
-                                            "Winner is {} 🎉 Your game ({}) was already played, please stop cheating?? 👀", 
-                                            winner.name, game_link
-                                        ),
-                                    });
-                            } else {
-                                self.db.set_game_played(&winner.name, true);
-                                self.delayed_messages.push(DelayedMessage {
-                                    time: self.time + 5.0,
-                                    message: format!(
-                                        "Winner is {} 🎉 Now we play {} 👏",
-                                        winner.name, game_link
-                                    ),
-                                });
-                            }
-                        }
-                        None => {
-                            self.delayed_messages.push(DelayedMessage {
-                                time: self.time + 5.0,
-                                message: format!(
-                                    "Winner is {} 🎉 No game was submitted? 😔",
-                                    winner.name
-                                ),
-                            });
-                        }
-                    },
-                }
-            }
-            self.winning_screen = true;
-            let mut sound_effect = self.assets.win_sfx.effect();
-            sound_effect.set_volume(self.volume);
-            sound_effect.play();
-        }
     }
 }
 
