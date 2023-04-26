@@ -23,5 +23,6 @@
         "#7E726B",
         "#8D7264"
     ],
-    "beard_color": "#aaa"
+    "beard_color": "#aaa",
+    "preferred_distance_spring_k": 0.01
 }

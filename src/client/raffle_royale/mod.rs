@@ -117,7 +117,8 @@ impl Drop for State {
 
 impl State {
     const GUY_RADIUS: f32 = 1.0;
-    const MIN_DISTANCE: f32 = 5.0;
+    const MIN_DISTANCE: f32 = 2.0;
+    const PREFERRED_DISTANCE: f32 = 5.0;
     const GUY_MAX_SPEED: f32 = 10.0;
     const GUY_ACCELERATION: f32 = 10.0;
     pub fn new(

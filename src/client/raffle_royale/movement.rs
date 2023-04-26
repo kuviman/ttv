@@ -33,10 +33,14 @@ impl State {
                 for other in &self.guys {
                     let delta_pos = guy.position - other.position;
                     let len = delta_pos.len();
+                    let v = delta_pos.normalize_or_zero();
                     if len < State::MIN_DISTANCE {
-                        let v = delta_pos.normalize_or_zero();
                         moves.push((guy.id, v * (State::MIN_DISTANCE - len) / 2.0));
                         guy.velocity -= v * vec2::dot(guy.velocity, v);
+                    } else if len < State::PREFERRED_DISTANCE {
+                        guy.velocity += v
+                            * (State::PREFERRED_DISTANCE - len)
+                            * self.assets.constants.preferred_distance_spring_k;
                     }
                 }
                 self.guys.insert(guy);
