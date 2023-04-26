@@ -19,36 +19,36 @@ impl State {
                 let x = x * 2 - 1;
                 let y = y * 2 - 1;
                 let p = self.camera.center + vec2(x as f32, y as f32) * self.camera.fov * 2.0;
-                draw_2d::TexturedVertex {
+                draw2d::TexturedVertex {
                     a_pos: p,
                     a_color: Rgba::WHITE,
                     a_vt: p,
                 }
             };
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::TexturedPolygon::new(
+                &draw2d::TexturedPolygon::new(
                     vec![vertex(0, 0), vertex(0, 1), vertex(1, 1), vertex(1, 0)],
                     &self.assets.background,
                 ),
             );
             for entity in &self.background_entities {
                 let texture = &self.assets.background_entities[entity.texture_index];
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &draw_2d::TexturedQuad::unit_colored(texture, entity.color)
+                    &draw2d::TexturedQuad::unit_colored(texture, entity.color)
                         .scale(texture.size().map(|x| x as f32) / 128.0)
                         .translate(entity.position),
                 );
             }
         }
 
-        // self.geng.draw_2d(
+        // self.geng.draw2d().draw2d(
         //     framebuffer,
         //     &self.camera,
-        //     &draw_2d::Ellipse::circle(
+        //     &draw2d::Ellipse::circle(
         //         self.circle.center,
         //         self.circle.radius,
         //         self.assets.config.circle,
@@ -66,10 +66,10 @@ impl State {
                 None => continue,
             };
             let v = target.position - attacker.position;
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::TexturedQuad::new(
+                &draw2d::TexturedQuad::new(
                     Aabb2::point(vec2(0.0, 0.0)).extend_uniform(1.0),
                     &self.assets.fireball,
                 )
@@ -81,10 +81,10 @@ impl State {
         for effect in &self.effects {
             let t = effect.time / effect.max_time;
             if let Some(texture) = &effect.back_texture {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::unit_colored(
+                    &geng::draw2d::TexturedQuad::unit_colored(
                         &**texture,
                         Rgba {
                             a: (1.0 - t) * effect.color.a,
@@ -99,45 +99,45 @@ impl State {
 
         for guy in &self.guys {
             if let Some(custom) = &guy.skin.custom {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::new(
+                    &geng::draw2d::TexturedQuad::new(
                         Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.custom[custom],
                     ),
                 );
             } else {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::new(
+                    &geng::draw2d::TexturedQuad::new(
                         Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.face[&guy.skin.face],
                     ),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::colored(
+                    &geng::draw2d::TexturedQuad::colored(
                         Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.hat[&guy.skin.hat],
                         guy.skin.outfit_color,
                     ),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::colored(
+                    &geng::draw2d::TexturedQuad::colored(
                         Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.robe[&guy.skin.robe],
                         guy.skin.outfit_color,
                     ),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::colored(
+                    &geng::draw2d::TexturedQuad::colored(
                         Aabb2::point(guy.position).extend_uniform(State::GUY_RADIUS),
                         &self.assets.guy.beard[&guy.skin.beard],
                         self.assets.constants.beard_color,
@@ -163,20 +163,20 @@ impl State {
 
                 let hp_bar_aabb =
                     Aabb2::point(pos + vec2(0.0, 0.2)).extend_symmetric(vec2(1.4, 0.2));
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &label_camera,
-                    &draw_2d::Quad::new(hp_bar_aabb.extend_uniform(0.1), Rgba::BLACK),
+                    &draw2d::Quad::new(hp_bar_aabb.extend_uniform(0.1), Rgba::BLACK),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &label_camera,
-                    &draw_2d::Quad::new(hp_bar_aabb, Rgba::RED),
+                    &draw2d::Quad::new(hp_bar_aabb, Rgba::RED),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &label_camera,
-                    &draw_2d::Quad::new(
+                    &draw2d::Quad::new(
                         {
                             let mut aabb = hp_bar_aabb;
                             aabb.max.x = hp_bar_aabb.min.x
@@ -187,10 +187,10 @@ impl State {
                     ),
                 );
 
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &label_camera,
-                    &draw_2d::Text::unit(
+                    &draw2d::Text::unit(
                         &**self.geng.default_font(),
                         format!("{}/{}", guy.health, guy.max_health),
                         Rgba::BLACK,
@@ -199,10 +199,10 @@ impl State {
                 );
 
                 let name_aabb = Aabb2::point(pos + vec2(0.0, 0.8)).extend_symmetric(vec2(2.0, 0.2));
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &label_camera,
-                    &draw_2d::Text::unit(
+                    &draw2d::Text::unit(
                         &**self.geng.default_font(),
                         &guy.name,
                         if guy.should_never_win {
@@ -219,10 +219,10 @@ impl State {
         for effect in &self.effects {
             let t = effect.time / effect.max_time;
             if let Some(texture) = &effect.front_texture {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &geng::draw_2d::TexturedQuad::unit_colored(
+                    &geng::draw2d::TexturedQuad::unit_colored(
                         &**texture,
                         Rgba {
                             a: (1.0 - t) * effect.color.a,
@@ -242,10 +242,10 @@ impl State {
         };
         if !self.process_battle {
             self.winning_screen = false;
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     "RAFFLE ROYALE",
@@ -254,10 +254,10 @@ impl State {
                 )
                 .translate(vec2(0.0, 5.0)),
             );
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     "WIP",
@@ -267,10 +267,10 @@ impl State {
                 .scale_uniform(0.5)
                 .translate(vec2(12.0, 6.0)),
             );
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     format!("type !{} to join", self.raffle_keyword),
@@ -281,10 +281,10 @@ impl State {
                 .translate(vec2(0.0, 2.5)),
             );
             if self.guys.iter().any(|guy| guy.should_never_win) {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &ui_camera,
-                    &draw_2d::Text::unit(
+                    &draw2d::Text::unit(
                         &**self.geng.default_font(),
                         "totally not rigged",
                         Rgba::BLACK,
@@ -293,10 +293,10 @@ impl State {
                     .translate(vec2(0.0, 3.5)),
                 );
             }
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     "code&graphics - kuviman",
@@ -306,10 +306,10 @@ impl State {
                 .scale_uniform(0.2)
                 .translate(vec2(0.0, -6.5)),
             );
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     "music&sfx - BrainoidGames",
@@ -370,10 +370,10 @@ impl State {
                 sound_effect.set_volume(self.volume);
                 sound_effect.play();
             }
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     if winner.name == "kuviman" {
@@ -386,10 +386,10 @@ impl State {
                 )
                 .translate(vec2(0.0, 5.0)),
             );
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &ui_camera,
-                &draw_2d::Text::unit(
+                &draw2d::Text::unit(
                     // &self.geng,
                     &**self.geng.default_font(),
                     "hooray",
@@ -410,10 +410,10 @@ impl State {
                     1.0,
                     Rgba::BLACK,
                 );
-                // self.geng.draw_2d(
+                // self.geng.draw2d().draw2d(
                 //     framebuffer,
                 //     &ui_camera,
-                //     &draw_2d::Text::unit(&**self.geng.default_font(), feed, Rgba::BLACK)
+                //     &draw2d::Text::unit(&**self.geng.default_font(), feed, Rgba::BLACK)
                 //         .scale_uniform(0.5)
                 //         .translate(vec2(0.0, 6.0)),
                 // );

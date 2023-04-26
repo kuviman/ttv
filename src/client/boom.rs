@@ -22,7 +22,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::LoadAsset::load(&geng, &path).await.unwrap(),
+            assets: geng::asset::Load::load(&geng, &path).await.unwrap(),
             geng,
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
@@ -44,10 +44,10 @@ impl Feature for State {
             return;
         }
         self.framebuffer_size = framebuffer.size().map(|x| x as f32);
-        self.geng.draw_2d(
+        self.geng.draw2d().draw2d(
             framebuffer,
             &self.camera,
-            &draw_2d::TexturedQuad::colored(
+            &draw2d::TexturedQuad::colored(
                 Aabb2::point(self.pos).extend_symmetric(
                     vec2(
                         self.assets.texture.size().x as f32 / self.assets.texture.size().y as f32,

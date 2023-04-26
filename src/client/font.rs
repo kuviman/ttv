@@ -41,7 +41,7 @@ void main() {
 pub struct Text<'a, F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> {
     geng: Geng,
     program: &'a ugli::Program,
-    inner: draw_2d::Text<F, T>,
+    inner: draw2d::Text<F, T>,
     outline_color: Rgba<f32>,
 }
 
@@ -57,7 +57,7 @@ impl<'a, F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Text<'a, F, T> {
         Self {
             geng: geng.clone(),
             program,
-            inner: draw_2d::Text::unit(font, text, color),
+            inner: draw2d::Text::unit(font, text, color),
             outline_color,
         }
     }
@@ -73,7 +73,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Tex
 }
 
 impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_, F, T> {
-    fn draw_2d_transformed(
+    fn draw2d_transformed(
         &self,
         _geng: &Geng,
         framebuffer: &mut ugli::Framebuffer,
@@ -100,7 +100,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_
                                 .extend_positive(vec2(1.0, 1.0))
                                 .corners()
                                 .into_iter()
-                                .map(|v| draw_2d::Vertex { a_pos: v })
+                                .map(|v| draw2d::Vertex { a_pos: v })
                                 .collect(),
                         ),
                         &ugli::VertexBuffer::new_dynamic(self.geng.ugli(), glyphs.to_vec()),

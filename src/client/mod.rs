@@ -249,46 +249,41 @@ pub fn run(addr: &str) {
         transparency: true,
         ..default()
     });
-    let connection = geng::net::client::connect(addr);
-    let future = connection.then({
-        let geng = geng.clone();
-        move |connection| async move {
-            let connection = Connection::new(connection);
+    geng.clone().run_loading(async move {
+        let connection = geng::net::client::connect(addr).await.unwrap();
+        let connection = Connection::new(connection);
 
-            fn load_feature<T: Feature>(
-                geng: &Geng,
-                path: std::path::PathBuf,
-                connection: Connection,
-            ) -> Pin<Box<dyn Future<Output = Box<dyn Feature>>>> {
-                T::load(geng.clone(), path, connection)
-                    .map(|feature| Box::new(feature) as Box<dyn Feature>)
-                    .boxed_local()
-            }
-
-            let features = future::join_all(load_features![
-                geng: geng,
-                connection: connection.clone(),
-                avatars,
-                raffle_royale,
-                boom,
-                hello,
-                jumpscare,
-                sound_commands,
-                text_commands,
-            ])
-            .await;
-            (connection, features)
+        fn load_feature<T: Feature>(
+            geng: &Geng,
+            path: std::path::PathBuf,
+            connection: Connection,
+        ) -> Pin<Box<dyn Future<Output = Box<dyn Feature>>>> {
+            T::load(geng.clone(), path, connection)
+                .map(|feature| Box::new(feature) as Box<dyn Feature>)
+                .boxed_local()
         }
+
+        // For pgorley
+        Some(Some(Some(Some(Some(Some(()))))))
+            .unwrap()
+            .unwrap()
+            .unwrap()
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        let features = future::join_all(load_features![
+            geng: geng,
+            connection: connection.clone(),
+            avatars,
+            raffle_royale,
+            boom,
+            hello,
+            jumpscare,
+            sound_commands,
+            text_commands,
+        ])
+        .await;
+        Overlay::new(&geng, connection, features)
     });
-    geng::run(
-        &geng,
-        geng::LoadingScreen::new(
-            &geng,
-            geng::EmptyLoadingScreen,
-            future.map({
-                let geng = geng.clone();
-                move |(connection, features)| Overlay::new(&geng, connection, features)
-            }),
-        ),
-    );
 }

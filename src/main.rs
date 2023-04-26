@@ -46,7 +46,7 @@ fn main() {
     }
     geng::setup_panic_handler();
 
-    let mut opt: Opt = program_args::parse();
+    let mut opt: Opt = cli::parse();
 
     if opt.connect.is_none() && opt.server.is_none() {
         if cfg!(target_arch = "wasm32") {

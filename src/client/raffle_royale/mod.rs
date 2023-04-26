@@ -447,7 +447,7 @@ impl Feature for State {
     where
         Self: Sized,
     {
-        let mut assets: Assets = geng::LoadAsset::load(&geng, &assets_path).await.unwrap();
+        let mut assets: Assets = geng::asset::Load::load(&geng, &assets_path).await.unwrap();
         assets.process();
         Self::new(&geng, &Rc::new(assets), connection)
     }

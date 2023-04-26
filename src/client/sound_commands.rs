@@ -10,7 +10,7 @@ impl Feature for State {
     where
         Self: Sized,
     {
-        let json: String = geng::LoadAsset::load(&geng, &path.join("config.json"))
+        let json: String = geng::asset::Load::load(&geng, &path.join("config.json"))
             .await
             .unwrap();
         let list: Vec<String> = serde_json::from_str(&json).unwrap();
@@ -20,7 +20,7 @@ impl Feature for State {
             async move {
                 (
                     format!("!{name}"),
-                    <geng::Sound as geng::LoadAsset>::load(
+                    <geng::Sound as geng::asset::Load>::load(
                         &geng,
                         &path.join(format!("{name}.wav")),
                     )

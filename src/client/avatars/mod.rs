@@ -23,10 +23,10 @@ async fn load_custom(
     path: std::path::PathBuf,
 ) -> anyhow::Result<HashMap<String, ugli::Texture>> {
     let path = &path;
-    let json: String = geng::LoadAsset::load(geng, &path.join("list.json")).await?;
+    let json: String = geng::asset::Load::load(geng, &path.join("list.json")).await?;
     let names: Vec<String> = serde_json::from_str(&json).unwrap();
     Ok(future::join_all(names.into_iter().map(|name| async move {
-        let texture = geng::LoadAsset::load(geng, &path.join(format!("{name}.png")))
+        let texture = geng::asset::Load::load(geng, &path.join(format!("{name}.png")))
             .await
             .unwrap();
         (name, texture)
@@ -168,7 +168,7 @@ impl Feature for State {
                 v
             },
             connection,
-            assets: geng::LoadAsset::load(&geng, &path).await.unwrap(),
+            assets: geng::asset::Load::load(&geng, &path).await.unwrap(),
             geng,
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
@@ -313,10 +313,10 @@ impl Feature for State {
         for (name, crab) in &self.crabs {
             let y = (crab.t * 10.0).sin();
             let mov = (crab.vel.len() / CRAB_SPEED).min(1.0);
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::TexturedQuad::unit(
+                &draw2d::TexturedQuad::unit(
                     crab.custom
                         .as_deref()
                         .and_then(|name| self.assets.custom.get(name))
@@ -374,10 +374,10 @@ impl Feature for State {
                 let mut y = start_y;
                 for line in lines.iter().rev() {
                     if let Some(aabb) = font.measure(line, 0.5) {
-                        self.geng.draw_2d(
+                        self.geng.draw2d().draw2d(
                             framebuffer,
                             &self.camera,
-                            &draw_2d::Quad::new(
+                            &draw2d::Quad::new(
                                 aabb.extend_uniform(0.4)
                                     .translate(crab.pos + vec2(-aabb.width() / 2.0, y)),
                                 Rgba::BLACK,
@@ -389,10 +389,10 @@ impl Feature for State {
                 y = start_y;
                 for line in lines.iter().rev() {
                     if let Some(aabb) = font.measure(line, 0.5) {
-                        self.geng.draw_2d(
+                        self.geng.draw2d().draw2d(
                             framebuffer,
                             &self.camera,
-                            &draw_2d::Quad::new(
+                            &draw2d::Quad::new(
                                 aabb.extend_uniform(0.2)
                                     .translate(crab.pos + vec2(-aabb.width() / 2.0, y)),
                                 Rgba::WHITE,
@@ -417,10 +417,10 @@ impl Feature for State {
             }
         }
         for farticle in &self.farticles {
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::TexturedQuad::unit_colored(
+                &draw2d::TexturedQuad::unit_colored(
                     &self.assets.farticle,
                     Rgba {
                         a: farticle.color.a * farticle.t,
@@ -434,29 +434,29 @@ impl Feature for State {
         }
         if self.bouncy_game {
             for &point in &self.bounce_points {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &draw_2d::Ellipse::circle(point, 0.3, Rgba::WHITE),
+                    &draw2d::Ellipse::circle(point, 0.3, Rgba::WHITE),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &draw_2d::Ellipse::circle(point, 0.2, Rgba::BLACK),
+                    &draw2d::Ellipse::circle(point, 0.2, Rgba::BLACK),
                 );
             }
         }
         if self.breakout {
             for &p in &self.bricks {
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &draw_2d::Quad::new(p, Rgba::BLACK),
+                    &draw2d::Quad::new(p, Rgba::BLACK),
                 );
-                self.geng.draw_2d(
+                self.geng.draw2d().draw2d(
                     framebuffer,
                     &self.camera,
-                    &draw_2d::Quad::new(p.extend_uniform(-0.1), Rgba::WHITE),
+                    &draw2d::Quad::new(p.extend_uniform(-0.1), Rgba::WHITE),
                 );
             }
             if self.bricks.is_empty() {

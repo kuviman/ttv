@@ -28,9 +28,9 @@ impl std::borrow::Borrow<ugli::Texture> for &'_ Texture {
     }
 }
 
-impl geng::LoadAsset for Texture {
-    fn load(geng: &Geng, path: &std::path::Path) -> geng::AssetFuture<Self> {
-        let texture = <ugli::Texture as geng::LoadAsset>::load(geng, path);
+impl geng::asset::Load for Texture {
+    fn load(geng: &Geng, path: &std::path::Path) -> geng::asset::Future<Self> {
+        let texture = <ugli::Texture as geng::asset::Load>::load(geng, path);
         async move {
             let mut texture = texture.await?;
             texture.set_filter(ugli::Filter::Nearest);
@@ -51,12 +51,12 @@ pub struct GuyAssets {
     pub custom_map: HashMap<String, String>,
 }
 
-impl geng::LoadAsset for GuyAssets {
-    fn load(geng: &Geng, path: &std::path::Path) -> geng::AssetFuture<Self> {
+impl geng::asset::Load for GuyAssets {
+    fn load(geng: &Geng, path: &std::path::Path) -> geng::asset::Future<Self> {
         let geng = geng.clone();
         let path = path.to_owned();
         async move {
-            let json = <String as geng::LoadAsset>::load(&geng, &path.join("_list.json"))
+            let json = <String as geng::asset::Load>::load(&geng, &path.join("_list.json"))
                 .await
                 .context("Failed to load config")?;
             #[derive(Deserialize)]
@@ -73,7 +73,7 @@ impl geng::LoadAsset for GuyAssets {
             let load_map = |class: String, list: Vec<String>| async move {
                 Ok::<_, anyhow::Error>(
                     future::join_all(list.iter().map(move |name| {
-                        <Texture as geng::LoadAsset>::load(
+                        <Texture as geng::asset::Load>::load(
                             &geng,
                             &path.join(&class).join(format!("{}.png", name)),
                         )

@@ -20,7 +20,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::LoadAsset::load(&geng, &path).await.unwrap(),
+            assets: geng::asset::Load::load(&geng, &path).await.unwrap(),
             geng,
             time: 0.0,
         }
@@ -34,14 +34,14 @@ impl Feature for State {
         if self.time <= 0.0 {
             return;
         }
-        self.geng.draw_2d(
+        self.geng.draw2d().draw2d(
             framebuffer,
             &geng::Camera2d {
                 center: vec2::ZERO,
                 rotation: 0.0,
                 fov: 10.0,
             },
-            &draw_2d::TexturedQuad::new(
+            &draw2d::TexturedQuad::new(
                 Aabb2::point(vec2::ZERO).extend_uniform(5.0),
                 &self.assets.yeti,
             ),

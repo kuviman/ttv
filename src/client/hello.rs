@@ -23,7 +23,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::LoadAsset::load(&geng, &assets_path).await.unwrap(),
+            assets: geng::asset::Load::load(&geng, &assets_path).await.unwrap(),
             font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
@@ -47,15 +47,15 @@ impl Feature for State {
         let x =
             self.camera.fov / 2.0 * framebuffer.size().x as f32 / framebuffer.size().y as f32 - 2.0;
         let y = -self.camera.fov / 2.0 + 1.0;
-        self.geng.draw_2d(
+        self.geng.draw2d().draw2d(
             framebuffer,
             &self.camera,
-            &draw_2d::TexturedQuad::new(
+            &draw2d::TexturedQuad::new(
                 Aabb2::point(vec2(x, y - 2.0 * (self.time - 1.0).abs().sqr())).extend_uniform(1.0),
                 &self.assets.crab,
             ),
         );
-        self.geng.draw_2d(
+        self.geng.draw2d().draw2d(
             framebuffer,
             &self.camera,
             &font::Text::unit(
