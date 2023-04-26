@@ -1,9 +1,9 @@
 use super::*;
 
-#[derive(geng::Assets)]
+#[derive(geng::asset::Load)]
 struct Assets {
     yeti: ugli::Texture,
-    #[asset(path = "JumpScare1.wav")]
+    #[load(path = "JumpScare1.wav")]
     sound: geng::Sound,
 }
 
@@ -20,7 +20,9 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::asset::Load::load(&geng, &path).await.unwrap(),
+            assets: geng::asset::Load::load(geng.asset_manager(), &path)
+                .await
+                .unwrap(),
             geng,
             time: 0.0,
         }

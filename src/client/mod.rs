@@ -193,7 +193,7 @@ impl geng::State for Overlay {
         }
         let mut new_messages = Vec::new();
         for message in self.connection.inner.lock().unwrap().new_messages() {
-            new_messages.push(message);
+            new_messages.push(message.unwrap());
         }
         for message in self.receiver.try_iter() {
             new_messages.push(message);
@@ -210,7 +210,7 @@ impl geng::State for Overlay {
                     .unwrap();
                 continue;
             }
-            info!("{:?}", message);
+            log::info!("{:?}", message);
             for feature in &mut self.features {
                 feature.handle(&message);
             }
@@ -249,8 +249,9 @@ pub fn run(addr: &str) {
         transparency: true,
         ..default()
     });
+    let addr = addr.to_owned();
     geng.clone().run_loading(async move {
-        let connection = geng::net::client::connect(addr).await.unwrap();
+        let connection = geng::net::client::connect(&addr).await.unwrap();
         let connection = Connection::new(connection);
 
         fn load_feature<T: Feature>(
@@ -273,7 +274,7 @@ pub fn run(addr: &str) {
             .unwrap();
 
         let features = future::join_all(load_features![
-            geng: geng,
+            geng: &geng,
             connection: connection.clone(),
             avatars,
             raffle_royale,

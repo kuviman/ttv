@@ -1,7 +1,7 @@
 use super::*;
 
-#[derive(Deserialize, geng::Assets)]
-#[asset(json)]
+#[derive(Deserialize, geng::asset::Load)]
+#[load(json)]
 pub struct Constants {
     pub background: Rgba<f32>,
     pub circle: Rgba<f32>,
@@ -29,8 +29,8 @@ impl std::borrow::Borrow<ugli::Texture> for &'_ Texture {
 }
 
 impl geng::asset::Load for Texture {
-    fn load(geng: &Geng, path: &std::path::Path) -> geng::asset::Future<Self> {
-        let texture = <ugli::Texture as geng::asset::Load>::load(geng, path);
+    fn load(manager: &geng::asset::Manager, path: &std::path::Path) -> geng::asset::Future<Self> {
+        let texture = <ugli::Texture as geng::asset::Load>::load(manager, path);
         async move {
             let mut texture = texture.await?;
             texture.set_filter(ugli::Filter::Nearest);
@@ -52,11 +52,11 @@ pub struct GuyAssets {
 }
 
 impl geng::asset::Load for GuyAssets {
-    fn load(geng: &Geng, path: &std::path::Path) -> geng::asset::Future<Self> {
-        let geng = geng.clone();
+    fn load(manager: &geng::asset::Manager, path: &std::path::Path) -> geng::asset::Future<Self> {
+        let manager = manager.clone();
         let path = path.to_owned();
         async move {
-            let json = <String as geng::asset::Load>::load(&geng, &path.join("_list.json"))
+            let json = <String as geng::asset::Load>::load(&manager, &path.join("_list.json"))
                 .await
                 .context("Failed to load config")?;
             #[derive(Deserialize)]
@@ -68,13 +68,13 @@ impl geng::asset::Load for GuyAssets {
                 custom: HashMap<String, String>,
             }
             let config: Config = serde_json::from_str(&json)?;
-            let geng = &geng;
+            let manager = &manager;
             let path = &path;
             let load_map = |class: String, list: Vec<String>| async move {
                 Ok::<_, anyhow::Error>(
                     future::join_all(list.iter().map(move |name| {
                         <Texture as geng::asset::Load>::load(
-                            &geng,
+                            &manager,
                             &path.join(&class).join(format!("{}.png", name)),
                         )
                         .map(move |texture| (name, texture))
@@ -114,26 +114,26 @@ impl geng::asset::Load for GuyAssets {
     const DEFAULT_EXT: Option<&'static str> = None;
 }
 
-#[derive(geng::Assets)]
+#[derive(geng::asset::Load)]
 pub struct Assets {
     pub fireball: Texture,
     pub background: ugli::Texture,
-    #[asset(range = "1..=1", path = "background_entities/*.png")]
+    #[load(list = "1..=1", path = "background_entities/*.png")]
     pub background_entities: Vec<Texture>,
     pub constants: Constants,
-    #[asset(path = "kuvimanPreBattle.wav")]
+    #[load(path = "kuvimanPreBattle.wav")]
     pub lobby_music: geng::Sound,
-    #[asset(path = "kuvimanBattle.wav")]
+    #[load(path = "kuvimanBattle.wav")]
     pub battle_music: geng::Sound,
-    #[asset(range = "1..=3", path = "player_joined*.mp3")]
+    #[load(list = "1..=3", path = "player_joined*.mp3")]
     pub spawn_sfx: Vec<geng::Sound>,
-    #[asset(path = "death.wav")]
+    #[load(path = "death.wav")]
     pub death_sfx: geng::Sound,
-    #[asset(path = "victory.mp3")]
+    #[load(path = "victory.mp3")]
     pub win_sfx: geng::Sound,
-    #[asset(path = "RaffleRoyaleTitle.wav")]
+    #[load(path = "RaffleRoyaleTitle.wav")]
     pub title_sfx: geng::Sound,
-    #[asset(path = "levelup.wav")]
+    #[load(path = "levelup.wav")]
     pub levelup_sfx: geng::Sound,
     pub levelup: Rc<Texture>,
     pub levelup_front: Rc<Texture>,
@@ -143,8 +143,8 @@ pub struct Assets {
 
 impl Assets {
     pub fn process(&mut self) {
-        self.lobby_music.looped = true;
-        self.battle_music.looped = true;
+        self.lobby_music.set_looped(true);
+        self.battle_music.set_looped(true);
         self.background.set_filter(ugli::Filter::Nearest);
         self.background.set_wrap_mode(ugli::WrapMode::Repeat);
     }

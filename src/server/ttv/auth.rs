@@ -64,10 +64,10 @@ pub async fn authenticate(
         query.append_pair("state", &state);
     }
 
-    info!("Opening {}", authorize_url);
+    log::info!("Opening {}", authorize_url);
     open::that(authorize_url.as_str())?; // Open browser
 
-    debug!("Waiting for the user to be redirected to {}", redirect_uri);
+    log::debug!("Waiting for the user to be redirected to {}", redirect_uri);
     let redirected_url = wait_for_request_uri().await?;
     let query: HashMap<_, _> = redirected_url.query_pairs().collect();
 
@@ -82,7 +82,7 @@ pub async fn authenticate(
     }
     let code: &str = query.get("code").expect("No code wat");
 
-    debug!("Got the code, getting the token");
+    log::debug!("Got the code, getting the token");
     let mut form = HashMap::new();
     form.insert("client_id", client_id);
     form.insert("client_secret", client_secret);
@@ -108,7 +108,7 @@ pub async fn authenticate(
 fn test_authenticate() {
     logger::init_for_tests();
     let secrets = secret::Secrets::init().unwrap();
-    info!(
+    log::info!(
         "{:?}",
         block_on(authenticate(
             &secrets.config.ttv.client_id,

@@ -405,9 +405,8 @@ impl State {
                     framebuffer,
                     &ui_camera,
                     feed,
-                    vec2(0.0, 6.0),
-                    geng::TextAlign::CENTER,
-                    1.0,
+                    vec2::splat(geng::TextAlign::CENTER),
+                    mat3::translate(vec2(0.0, 6.0)),
                     Rgba::BLACK,
                 );
                 // self.geng.draw2d().draw2d(

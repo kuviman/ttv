@@ -57,11 +57,11 @@ impl Client {
                     .unwrap(),
             ),
         ));
-        debug!("Connecting to ttv irc");
+        log::debug!("Connecting to ttv irc");
         let (mut incoming_messages, client) = tokio_runtime.block_on(async {
             TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(config)
         });
-        debug!("Connected to ttv irc");
+        log::debug!("Connected to ttv irc");
 
         let (messages_sender, messages_receiver) = tokio::sync::mpsc::unbounded_channel();
 
@@ -72,9 +72,9 @@ impl Client {
                 let join_handle = tokio::spawn(async move {
                     // This loop (and the thread) will only stop when TwitchIRCClient is dropped
                     while let Some(message) = incoming_messages.recv().await {
-                        trace!("{}", serde_json::to_string(&message).unwrap());
+                        log::trace!("{}", serde_json::to_string(&message).unwrap());
                         if let Err(e) = messages_sender.send(Message::Irc(message)) {
-                            error!("{:?}", e);
+                            log::error!("{:?}", e);
                         }
                     }
                 });
@@ -82,16 +82,16 @@ impl Client {
             }
         };
         let thread = std::thread::spawn(move || {
-            debug!("Ttv client thread started");
+            log::debug!("Ttv client thread started");
             tokio_runtime.block_on(async_thread);
-            debug!("Ttv client thread stopped");
+            log::debug!("Ttv client thread stopped");
         });
 
         std::thread::spawn({
             let channel_login = channel_login.clone();
             let bot_login = bot_login.to_owned();
             move || {
-                debug!("PubSub thread started");
+                log::debug!("PubSub thread started");
                 pubsub(
                     &Secrets::init()
                         .unwrap()
@@ -100,7 +100,7 @@ impl Client {
                     &channel_login,
                     messages_sender,
                 );
-                debug!("PubSub thread stopped");
+                log::debug!("PubSub thread stopped");
             }
         });
 
@@ -192,7 +192,7 @@ fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Messa
         let mut timer = Timer::new();
         loop {
             if timer.elapsed().as_secs_f64() > 60.0 {
-                debug!("Sending ping to pubsub");
+                log::debug!("Sending ping to pubsub");
                 ws.send(websocket_lite::Message::text(r#"{"type": "PING"}"#))
                     .await
                     .unwrap();
@@ -209,7 +209,7 @@ fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Messa
                 }
             };
             let message = message.unwrap().unwrap();
-            debug!("{:?}", message);
+            log::debug!("{:?}", message);
             let message = serde_json::from_str::<serde_json::Value>(message.as_text().unwrap())
                 .unwrap()
                 .as_object()
@@ -261,7 +261,7 @@ fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Messa
                         .as_str()
                         .unwrap()
                         .to_owned();
-                    info!("{} redeemed {}", name, reward);
+                    log::info!("{} redeemed {}", name, reward);
                     sender
                         .send(Message::RewardRedemption { name, reward })
                         .unwrap();

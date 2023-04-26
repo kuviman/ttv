@@ -75,7 +75,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> Transform2d<f32> for Tex
 impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_, F, T> {
     fn draw2d_transformed(
         &self,
-        _geng: &Geng,
+        _helper: &draw2d::Helper,
         framebuffer: &mut ugli::Framebuffer,
         camera: &dyn geng::AbstractCamera2d,
         transform: mat3<f32>,
@@ -112,7 +112,7 @@ impl<F: std::borrow::Borrow<geng::Font>, T: AsRef<str>> geng::Draw2d for Text<'_
                             u_color: self.inner.color,
                             u_outline_color: self.outline_color,
                         },
-                        geng::camera2d_uniforms(camera, framebuffer_size.map(|x| x as f32)),
+                        camera.uniforms(framebuffer_size.map(|x| x as f32)),
                     ),
                     ugli::DrawParameters {
                         depth_func: None,

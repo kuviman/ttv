@@ -1,32 +1,32 @@
 use super::*;
 
-#[derive(Deserialize, geng::Assets)]
-#[asset(json)]
+#[derive(Deserialize, geng::asset::Load)]
+#[load(json)]
 struct Config {
     fart_color: Rgba<f32>,
 }
 
-#[derive(geng::Assets)]
+#[derive(geng::asset::Load)]
 struct Assets {
-    #[asset(load_with = "load_custom(&geng, base_path.join(\"custom\"))")]
+    #[load(load_with = "load_custom(&manager, base_path.join(\"custom\"))")]
     custom: HashMap<String, ugli::Texture>,
     config: Config,
-    #[asset(postprocess = "pixelate")]
+    #[load(postprocess = "pixelate")]
     crab: ugli::Texture,
-    #[asset(range = "1..=3", path = "fart*.wav")]
+    #[load(list = "1..=3", path = "fart*.wav")]
     fart: Vec<geng::Sound>,
     farticle: ugli::Texture,
 }
 
 async fn load_custom(
-    geng: &Geng,
+    manager: &geng::asset::Manager,
     path: std::path::PathBuf,
 ) -> anyhow::Result<HashMap<String, ugli::Texture>> {
     let path = &path;
-    let json: String = geng::asset::Load::load(geng, &path.join("list.json")).await?;
+    let json: String = geng::asset::Load::load(manager, &path.join("list.json")).await?;
     let names: Vec<String> = serde_json::from_str(&json).unwrap();
     Ok(future::join_all(names.into_iter().map(|name| async move {
-        let texture = geng::asset::Load::load(geng, &path.join(format!("{name}.png")))
+        let texture = geng::asset::Load::load(manager, &path.join(format!("{name}.png")))
             .await
             .unwrap();
         (name, texture)
@@ -150,6 +150,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
+            geng: geng.clone(),
             grid_size: 10,
             win_timer: 0.0,
             breakout: false,
@@ -168,8 +169,9 @@ impl Feature for State {
                 v
             },
             connection,
-            assets: geng::asset::Load::load(&geng, &path).await.unwrap(),
-            geng,
+            assets: geng::asset::Load::load(geng.asset_manager(), &path)
+                .await
+                .unwrap(),
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
@@ -302,9 +304,8 @@ impl Feature for State {
                 framebuffer,
                 &self.camera,
                 "!drop",
-                vec2(0.0, 8.5),
-                geng::TextAlign::CENTER,
-                1.0,
+                vec2::splat(geng::TextAlign::CENTER),
+                mat3::translate(vec2(0.0, 8.5)),
                 Rgba::WHITE,
                 0.05,
                 Rgba::BLACK,
@@ -329,11 +330,10 @@ impl Feature for State {
                 framebuffer,
                 &self.camera,
                 name,
-                crab.pos + vec2(0.0, 1.0),
-                geng::TextAlign::CENTER,
-                0.5,
+                vec2::splat(geng::TextAlign::CENTER),
+                mat3::translate(crab.pos + vec2(0.0, 1.0)) * mat3::scale_uniform(0.5),
                 Rgba::BLACK,
-                0.04,
+                0.08,
                 Rgba::WHITE,
             );
             if self.breakout {
@@ -341,11 +341,10 @@ impl Feature for State {
                     framebuffer,
                     &self.camera,
                     &format!("score: {}", crab.score),
-                    crab.pos + vec2(0.0, 1.5),
-                    geng::TextAlign::CENTER,
-                    0.5,
+                    vec2::splat(geng::TextAlign::CENTER),
+                    mat3::translate(crab.pos + vec2(0.0, 1.5)) * mat3::scale_uniform(0.5),
                     Rgba::BLACK,
-                    0.04,
+                    0.08,
                     Rgba::WHITE,
                 );
             }
@@ -373,7 +372,10 @@ impl Feature for State {
                 let start_y = 2.0;
                 let mut y = start_y;
                 for line in lines.iter().rev() {
-                    if let Some(aabb) = font.measure(line, 0.5) {
+                    if let Some(aabb) = font
+                        .measure(line, vec2::splat(geng::TextAlign::LEFT))
+                        .map(|bb| bb.map(|x| x * 0.5))
+                    {
                         self.geng.draw2d().draw2d(
                             framebuffer,
                             &self.camera,
@@ -388,7 +390,10 @@ impl Feature for State {
                 }
                 y = start_y;
                 for line in lines.iter().rev() {
-                    if let Some(aabb) = font.measure(line, 0.5) {
+                    if let Some(aabb) = font
+                        .measure(line, vec2::splat(geng::TextAlign::LEFT))
+                        .map(|bb| bb.map(|x| x * 0.5))
+                    {
                         self.geng.draw2d().draw2d(
                             framebuffer,
                             &self.camera,
@@ -407,9 +412,8 @@ impl Feature for State {
                         framebuffer,
                         &self.camera,
                         line,
-                        crab.pos + vec2(0.0, y),
-                        geng::TextAlign::CENTER,
-                        0.5,
+                        vec2::splat(geng::TextAlign::CENTER),
+                        mat3::translate(crab.pos + vec2(0.0, y)) * mat3::scale_uniform(0.5),
                         Rgba::BLACK,
                     );
                     y += 0.5;
@@ -465,9 +469,8 @@ impl Feature for State {
                         framebuffer,
                         &self.camera,
                         "winner is",
-                        vec2(0.0, 4.0),
-                        geng::TextAlign::CENTER,
-                        2.0,
+                        vec2::splat(geng::TextAlign::CENTER),
+                        mat3::translate(vec2(0.0, 4.0)) * mat3::scale_uniform(2.0),
                         Rgba::BLACK,
                         0.04,
                         Rgba::WHITE,
@@ -476,9 +479,8 @@ impl Feature for State {
                         framebuffer,
                         &self.camera,
                         name,
-                        vec2(0.0, 0.0),
-                        geng::TextAlign::CENTER,
-                        4.0,
+                        vec2::splat(geng::TextAlign::CENTER),
+                        mat3::translate(vec2(0.0, 0.0)) * mat3::scale_uniform(4.0),
                         Rgba::BLACK,
                         0.08,
                         Rgba::WHITE,
@@ -487,9 +489,8 @@ impl Feature for State {
                         framebuffer,
                         &self.camera,
                         &format!("with score of {}", winner.score),
-                        vec2(0.0, -2.0),
-                        geng::TextAlign::CENTER,
-                        2.0,
+                        vec2::splat(geng::TextAlign::CENTER),
+                        mat3::translate(vec2(0.0, -2.0)) * mat3::scale_uniform(2.0),
                         Rgba::BLACK,
                         0.04,
                         Rgba::WHITE,

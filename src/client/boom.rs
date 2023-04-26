@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(geng::Assets)]
+#[derive(geng::asset::Load)]
 struct Assets {
     texture: ugli::Texture,
     sound: geng::Sound,
@@ -22,7 +22,9 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::asset::Load::load(&geng, &path).await.unwrap(),
+            assets: geng::asset::Load::load(geng.asset_manager(), &path)
+                .await
+                .unwrap(),
             geng,
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {

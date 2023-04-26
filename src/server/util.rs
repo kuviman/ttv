@@ -23,12 +23,12 @@ pub fn read_file(path: impl AsRef<std::path::Path>) -> eyre::Result<String> {
 /// Run a local server and wait for an http request, and return the uri
 pub async fn wait_for_request_uri() -> eyre::Result<Url> {
     let addr: std::net::SocketAddr = "127.0.0.1:3000".parse().unwrap();
-    debug!("Listening {}", addr);
+    log::debug!("Listening {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
     // We just wait for the first connection
-    debug!("Waiting for connection...");
+    log::debug!("Waiting for connection...");
     let (stream, _) = listener.accept().await?;
-    debug!("Got connection");
+    log::debug!("Got connection");
 
     // Use a channel because how else?
     let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<hyper::Uri>();

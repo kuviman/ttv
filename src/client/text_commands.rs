@@ -11,7 +11,7 @@ impl Feature for State {
     where
         Self: Sized,
     {
-        let json: String = geng::asset::Load::load(&geng, &path.join("config.json"))
+        let json: String = geng::asset::Load::load(geng.asset_manager(), &path.join("config.json"))
             .await
             .unwrap();
         Self {

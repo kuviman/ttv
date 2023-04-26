@@ -1,8 +1,8 @@
 use super::*;
 
-#[derive(geng::Assets)]
+#[derive(geng::asset::Load)]
 struct Assets {
-    #[asset(range = "1..=3", path = "*.wav")]
+    #[load(list = "1..=3", path = "*.wav")]
     sound: Vec<geng::Sound>,
     crab: ugli::Texture,
 }
@@ -23,7 +23,9 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::asset::Load::load(&geng, &assets_path).await.unwrap(),
+            assets: geng::asset::Load::load(geng.asset_manager(), &assets_path)
+                .await
+                .unwrap(),
             font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
