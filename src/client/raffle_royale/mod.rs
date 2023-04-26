@@ -91,6 +91,7 @@ pub struct State {
     effects: Vec<Effect>,
     raffle_keyword: String,
     volume: f64,
+    noise: noise::OpenSimplex,
 }
 
 struct Effect {
@@ -190,6 +191,7 @@ impl State {
             raffle_mode: RaffleMode::Ld,
             effects: vec![],
             raffle_keyword: "fight".to_owned(),
+            noise: noise::OpenSimplex::new(thread_rng().gen()),
         }
     }
 

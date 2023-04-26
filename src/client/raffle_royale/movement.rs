@@ -10,9 +10,12 @@ impl State {
 
         // Guys do be accelerating
         for id in &ids {
+            use noise::NoiseFn;
             let mut guy = self.guys.remove(id).unwrap();
-            let target_velocity =
+            let mut target_velocity =
                 (center - guy.position).normalize_or_zero() * State::GUY_MAX_SPEED;
+            target_velocity += target_velocity.rotate_90()
+                * self.noise.get([guy.id as f64, self.time as f64]) as f32;
             guy.velocity +=
                 (target_velocity - guy.velocity).clamp_len(..=State::GUY_ACCELERATION * delta_time);
             self.guys.insert(guy);
