@@ -147,7 +147,8 @@ impl State {
                     ),
                 );
             }
-
+        }
+        for guy in &self.guys {
             if let Some(pos) = self.camera.world_to_screen(
                 self.framebuffer_size.map(|x| x as f32),
                 guy.position + vec2(0.0, State::GUY_RADIUS),
