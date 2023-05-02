@@ -127,6 +127,7 @@ impl Crab {
 }
 
 pub struct State {
+    disabled: bool,
     geng: Geng,
     assets: Assets,
     camera: geng::Camera2d,
@@ -150,6 +151,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
+            disabled: false,
             geng: geng.clone(),
             grid_size: 10,
             win_timer: 0.0,
@@ -296,6 +298,9 @@ impl Feature for State {
     }
     async fn handle_event(&mut self, event: geng::Event) {}
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
+        if self.disabled {
+            return;
+        }
         self.framebuffer_size = framebuffer.size().map(|x| x as f32);
         let font: &geng::Font = self.geng.default_font();
         if self.bouncy_game {
@@ -508,6 +513,9 @@ impl Feature for State {
         {
             let parts: Vec<&str> = message.split_whitespace().collect();
             if name == "kuviman" {
+                if message == "!toggle avatars" {
+                    self.disabled = !self.disabled;
+                }
                 if parts.first() == Some(&"!setavatar") && parts.len() == 3 {
                     self.connection
                         .set_key_value(&format!("avatars/{}", parts[1]), &parts[2]);
