@@ -13,7 +13,7 @@ pub struct TtvConfig {
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    pub db: DbConfig,
+    // pub db: DbConfig,
     pub ttv: TtvConfig,
 }
 

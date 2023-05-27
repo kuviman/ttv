@@ -81,6 +81,7 @@ fn main() {
                 server::run(&addr, opt.serve.as_deref());
             });
         }
+        std::thread::sleep_ms(5000);
         client::run(opt.connect.as_deref().unwrap());
     }
 }
