@@ -8,6 +8,7 @@
     "!ees": "https://kuviman.itch.io/extremely-extreme-sports",
     "!github": "https://github.com/kuviman",
     "!geng": "https://github.com/kuviman/geng",
+    "!engine": "https://github.com/kuviman/geng",
     "!coots": "https://kuviman.itch.io/cootsmania",
     "!trailer": "https://youtu.be/quSAxcsSd0o",
     "!bluedanube": "https://youtu.be/quSAxcsSd0o",
@@ -15,5 +16,8 @@
     "!linksider": "https://kuviman.itch.io/linksider",
     "!fish": "badcop3Confused",
     "!juggle": "https://ldjam.com/events/ludum-dare/53/juggle-mail",
-    "!ldsc": "LudumDare ScoreChasers Tournament on Saturday May 13th 14:00 UTC: https://discord.gg/aM9mvhCm4P"
+    "!animation": "https://neovide.dev/",
+    "!editor": "neovide (neovim)",
+    "!os": "NixOS BTW",
+    "!wm": "Hyprland"
 }
