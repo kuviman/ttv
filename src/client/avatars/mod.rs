@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Deserialize, geng::asset::Load)]
-#[load(json)]
+#[load(serde = "json")]
 struct Config {
     fart_color: Rgba<f32>,
 }
@@ -177,7 +177,7 @@ impl Feature for State {
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
-                rotation: 0.0,
+                rotation: Angle::ZERO,
                 fov: 20.0,
             },
             time: 0.0,
@@ -328,7 +328,7 @@ impl Feature for State {
                         .and_then(|name| self.assets.custom.get(name))
                         .unwrap_or(&self.assets.crab),
                 )
-                .transform(mat3::rotate(y * 0.1 * mov))
+                .transform(mat3::rotate(Angle::from_radians(y * 0.1 * mov)))
                 .translate(crab.pos + vec2(0.0, y.abs() * 0.1 * mov)),
             );
             font.draw_with_outline(
@@ -436,7 +436,7 @@ impl Feature for State {
                         ..farticle.color
                     },
                 )
-                .transform(mat3::rotate(farticle.rot))
+                .transform(mat3::rotate(Angle::from_radians(farticle.rot)))
                 .scale_uniform(farticle.size)
                 .translate(farticle.pos),
             )
@@ -549,7 +549,7 @@ impl Feature for State {
                 let angle = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
                 let angle = angle.clamp_abs(45);
                 crab.vel = vec2(0.0, if self.breakout { 30.0 } else { 10.0 })
-                    .rotate(angle as f32 * f32::PI / 180.0);
+                    .rotate(Angle::from_radians(angle as f32 * f32::PI / 180.0));
                 return;
             }
             match message.trim() {

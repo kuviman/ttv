@@ -226,7 +226,7 @@ impl geng::State for Overlay {
         if self.features.iter().any(|feature| feature.inner.is_none()) {
             return;
         }
-        ugli::clear(framebuffer, Some(Rgba::new(0.0, 1.0, 0.0, 0.0)), None, None);
+        ugli::clear(framebuffer, Some(Rgba::new(0.0, 0.0, 0.0, 1.0)), None, None);
         for feature in &mut self.features {
             feature.draw(framebuffer);
         }
@@ -249,11 +249,11 @@ macro_rules! load_features {
     }}
 }
 
-pub fn run(addr: &str) {
+pub fn run(geng_args: &geng::CliArgs, addr: &str) {
     let geng = Geng::new_with(geng::ContextOptions {
         title: "TTV".to_owned(),
-        transparency: true,
-        ..default()
+        // transparency: true,
+        ..geng::ContextOptions::from_args(geng_args)
     });
     let addr = addr.to_owned();
     geng.clone().run_loading(async move {

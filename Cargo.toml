@@ -9,7 +9,7 @@ serve = []
 
 [dependencies]
 raffle-royale = { path = "raffle-royale" }
-geng = { git = "https://github.com/kuviman/geng" }
+geng = { git = "https://github.com/geng-engine/geng" }
 serde = "1"
 url = "2"
 eyre = "0.6"

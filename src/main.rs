@@ -48,6 +48,8 @@ struct Opt {
     pub connect: Option<String>,
     #[clap(long)]
     pub serve: Option<std::path::PathBuf>,
+    #[clap(flatten)]
+    pub geng: geng::CliArgs,
 }
 
 fn main() {
@@ -82,6 +84,6 @@ fn main() {
             });
         }
         std::thread::sleep_ms(5000);
-        client::run(opt.connect.as_deref().unwrap());
+        client::run(&opt.geng, opt.connect.as_deref().unwrap());
     }
 }

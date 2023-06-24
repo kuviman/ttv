@@ -26,7 +26,9 @@ impl State {
                             ),
                             0.0,
                         )
-                        .rotate(thread_rng().gen_range(0.0..2.0 * f32::PI)),
+                        .rotate(Angle::from_radians(
+                            thread_rng().gen_range(0.0..2.0 * f32::PI),
+                        )),
                 )
             })
             .take(50)
@@ -49,7 +51,9 @@ impl State {
                         ),
                         0.0,
                     )
-                    .rotate(thread_rng().gen_range(0.0..2.0 * f32::PI)),
+                    .rotate(Angle::from_radians(
+                        thread_rng().gen_range(0.0..2.0 * f32::PI),
+                    )),
             ),
             velocity: vec2::ZERO,
             health,

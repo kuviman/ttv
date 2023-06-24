@@ -29,7 +29,7 @@ impl Feature for State {
             framebuffer_size: vec2(1.0, 1.0),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
-                rotation: 0.0,
+                rotation: Angle::ZERO,
                 fov: 10.0,
             },
             time: 0.0,

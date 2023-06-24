@@ -67,7 +67,7 @@ impl State {
             };
             let mut v = target.position - attacker.position;
             if !attack.hit {
-                v = v.rotate(f32::PI / 6.0);
+                v = v.rotate(Angle::from_radians(f32::PI / 6.0));
             }
             self.geng.draw2d().draw2d(
                 framebuffer,
@@ -158,7 +158,7 @@ impl State {
                 } else {
                     geng::Camera2d {
                         center: vec2::ZERO,
-                        rotation: 0.0,
+                        rotation: Angle::ZERO,
                         fov: 20.0_f32.max(self.camera.fov * 0.6),
                     }
                 };
@@ -241,7 +241,7 @@ impl State {
 
         let ui_camera = geng::Camera2d {
             center: vec2::ZERO,
-            rotation: 0.0,
+            rotation: Angle::ZERO,
             fov: 15.0,
         };
         if !self.process_battle {

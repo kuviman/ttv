@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Deserialize, geng::asset::Load)]
-#[load(json)]
+#[load(serde = "json")]
 pub struct Constants {
     pub background: Rgba<f32>,
     pub circle: Rgba<f32>,

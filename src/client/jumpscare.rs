@@ -40,7 +40,7 @@ impl Feature for State {
             framebuffer,
             &geng::Camera2d {
                 center: vec2::ZERO,
-                rotation: 0.0,
+                rotation: Angle::ZERO,
                 fov: 10.0,
             },
             &draw2d::TexturedQuad::new(

@@ -29,7 +29,7 @@ impl Feature for State {
             font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
-                rotation: 0.0,
+                rotation: Angle::ZERO,
                 fov: 10.0,
             },
             geng,

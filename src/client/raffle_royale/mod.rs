@@ -153,7 +153,7 @@ impl State {
             guys: default(),
             camera: geng::Camera2d {
                 center: vec2::ZERO,
-                rotation: 0.0,
+                rotation: Angle::ZERO,
                 fov: 50.0,
             },
             framebuffer_size: vec2(1, 1),
