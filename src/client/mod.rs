@@ -250,47 +250,58 @@ macro_rules! load_features {
 }
 
 pub fn run(geng_args: &geng::CliArgs, addr: &str) {
-    let geng = Geng::new_with(geng::ContextOptions {
-        title: "TTV".to_owned(),
-        transparency: true,
-        ..geng::ContextOptions::from_args(geng_args)
-    });
     let addr = addr.to_owned();
-    geng.clone().run_loading(async move {
-        let connection = geng::net::client::connect(&addr).await.unwrap();
-        let connection = Connection::new(connection);
+    Geng::run_with(
+        &{
+            let mut options = geng::ContextOptions {
+                window: geng::window::Options::new("TTV"),
+                ..default()
+            };
+            options.with_cli(geng_args);
+            options
+        },
+        |geng| {
+            async move {
+                let addr = addr.to_owned();
+                let connection = geng::net::client::connect(&addr).await.unwrap();
+                let connection = Connection::new(connection);
 
-        fn load_feature<T: Feature>(
-            geng: &Geng,
-            path: std::path::PathBuf,
-            connection: Connection,
-        ) -> Pin<Box<dyn Future<Output = Box<dyn Feature>>>> {
-            T::load(geng.clone(), path, connection)
-                .map(|feature| Box::new(feature) as Box<dyn Feature>)
-                .boxed_local()
-        }
+                fn load_feature<T: Feature>(
+                    geng: &Geng,
+                    path: std::path::PathBuf,
+                    connection: Connection,
+                ) -> Pin<Box<dyn Future<Output = Box<dyn Feature>>>> {
+                    T::load(geng.clone(), path, connection)
+                        .map(|feature| Box::new(feature) as Box<dyn Feature>)
+                        .boxed_local()
+                }
 
-        // For pgorley
-        Some(Some(Some(Some(Some(Some(()))))))
-            .unwrap()
-            .unwrap()
-            .unwrap()
-            .unwrap()
-            .unwrap()
-            .unwrap();
+                // For pgorley
+                Some(Some(Some(Some(Some(Some(()))))))
+                    .unwrap()
+                    .unwrap()
+                    .unwrap()
+                    .unwrap()
+                    .unwrap()
+                    .unwrap();
 
-        let features = future::join_all(load_features![
-            geng: &geng,
-            connection: connection.clone(),
-            avatars,
-            raffle_royale,
-            boom,
-            hello,
-            jumpscare,
-            sound_commands,
-            text_commands,
-        ])
-        .await;
-        Overlay::new(&geng, connection, features)
-    });
+                let features = future::join_all(load_features![
+                    geng: &geng,
+                    connection: connection.clone(),
+                    avatars,
+                    raffle_royale,
+                    boom,
+                    hello,
+                    jumpscare,
+                    sound_commands,
+                    text_commands,
+                ])
+                .await;
+                geng.clone()
+                    .run_state(Overlay::new(&geng, connection, features))
+                    .await;
+            }
+            .boxed_local()
+        },
+    );
 }

@@ -10,9 +10,10 @@ impl Feature for State {
     where
         Self: Sized,
     {
-        let json: String = geng::asset::Load::load(geng.asset_manager(), &path.join("config.json"))
-            .await
-            .unwrap();
+        let json: String =
+            geng::asset::Load::load(geng.asset_manager(), &path.join("config.json"), &default())
+                .await
+                .unwrap();
         let list: Vec<String> = serde_json::from_str(&json).unwrap();
         let sounds = future::join_all(list.into_iter().map(|name| {
             let geng = geng.clone();
@@ -23,6 +24,7 @@ impl Feature for State {
                     <geng::Sound as geng::asset::Load>::load(
                         geng.asset_manager(),
                         &path.join(format!("{name}.wav")),
+                        &default(),
                     )
                     .await
                     .unwrap(),

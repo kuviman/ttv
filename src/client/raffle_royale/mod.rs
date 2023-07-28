@@ -409,7 +409,8 @@ impl Feature for State {
     }
     async fn handle_event(&mut self, event: geng::Event) {
         match event {
-            geng::Event::MouseDown { position, button } => {
+            geng::Event::MousePress { button } => {
+                let position = self.geng.window().cursor_position().unwrap();
                 let position = self.camera.screen_to_world(
                     self.framebuffer_size.map(|x| x as f32),
                     position.map(|x| x as f32),
@@ -466,7 +467,7 @@ impl Feature for State {
                     _ => {}
                 }
             }
-            geng::Event::KeyDown { key } => match key {
+            geng::Event::KeyPress { key } => match key {
                 geng::Key::S => {
                     self.spawn_guy(
                         thread_rng()
@@ -505,9 +506,10 @@ impl Feature for State {
     where
         Self: Sized,
     {
-        let mut assets: Assets = geng::asset::Load::load(geng.asset_manager(), &assets_path)
-            .await
-            .unwrap();
+        let mut assets: Assets =
+            geng::asset::Load::load(geng.asset_manager(), &assets_path, &default())
+                .await
+                .unwrap();
         assets.process();
         Self::new(&geng, &Rc::new(assets), connection)
     }

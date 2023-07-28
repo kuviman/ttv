@@ -23,7 +23,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            assets: geng::asset::Load::load(geng.asset_manager(), &assets_path)
+            assets: geng::asset::Load::load(geng.asset_manager(), &assets_path, &default())
                 .await
                 .unwrap(),
             font_program: geng.shader_lib().compile(font::SHADER_SOURCE).unwrap(),

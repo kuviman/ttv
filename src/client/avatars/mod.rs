@@ -23,12 +23,14 @@ async fn load_custom(
     path: std::path::PathBuf,
 ) -> anyhow::Result<HashMap<String, ugli::Texture>> {
     let path = &path;
-    let json: String = geng::asset::Load::load(manager, &path.join("list.json")).await?;
+    let json: String =
+        geng::asset::Load::load(manager, &path.join("list.json"), &default()).await?;
     let names: Vec<String> = serde_json::from_str(&json).unwrap();
     Ok(future::join_all(names.into_iter().map(|name| async move {
-        let texture = geng::asset::Load::load(manager, &path.join(format!("{name}.png")))
-            .await
-            .unwrap();
+        let texture =
+            geng::asset::Load::load(manager, &path.join(format!("{name}.png")), &default())
+                .await
+                .unwrap();
         (name, texture)
     }))
     .await
@@ -171,7 +173,7 @@ impl Feature for State {
                 v
             },
             connection,
-            assets: geng::asset::Load::load(geng.asset_manager(), &path)
+            assets: geng::asset::Load::load(geng.asset_manager(), &path, &default())
                 .await
                 .unwrap(),
             framebuffer_size: vec2(1.0, 1.0),
