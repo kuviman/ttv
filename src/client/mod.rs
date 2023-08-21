@@ -258,6 +258,7 @@ pub fn run(geng_args: &geng::CliArgs, addr: &str) {
                 ..default()
             };
             options.with_cli(geng_args);
+            options.window.transparency = true;
             options
         },
         |geng| {

@@ -83,6 +83,7 @@ fn main() {
                 server::run(&addr, opt.serve.as_deref());
             });
         }
+        #[cfg(not(target_arch = "wasm32"))]
         std::thread::sleep_ms(5000);
         client::run(&opt.geng, opt.connect.as_deref().unwrap());
     }
