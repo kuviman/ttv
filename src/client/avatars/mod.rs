@@ -180,7 +180,7 @@ impl Feature for State {
             camera: geng::Camera2d {
                 center: vec2::ZERO,
                 rotation: Angle::ZERO,
-                fov: 20.0,
+                fov: 40.0,
             },
             time: 0.0,
             crabs: default(),
