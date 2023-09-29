@@ -1,6 +1,7 @@
 {
     "!discord": "Join the discord! https://discord.gg/qPuvJ3fT7u",
     "!itch": "https://kuviman.itch.io/",
+    "!beans": "https://kuviman.itch.io/beans-of-power",
     "!gfo": "https://kuviman.itch.io/getting-farted-on",
     "!flashdark": "https://kuviman.itch.io/flashdark",
     "!sof": "https://kuviman.itch.io/sea-of-friends",
@@ -16,8 +17,8 @@
     "!linksider": "https://kuviman.itch.io/linksider",
     "!fish": "badcop3Confused",
     "!juggle": "https://ldjam.com/events/ludum-dare/53/juggle-mail",
-    "!animation": "https://neovide.dev/",
-    "!editor": "neovide (neovim)",
+    "!editor": "all of them",
     "!os": "NixOS BTW",
-    "!wm": "Hyprland"
+    "!wm": "Gnome",
+    "!score-chasers": "https://ldjam.com/events/ludum-dare/54/$374768/the-fifth-ludum-dare-score-chasers-tournament"
 }
