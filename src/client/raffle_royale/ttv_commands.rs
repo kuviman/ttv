@@ -293,7 +293,8 @@ impl State {
                             color: Rgba::YELLOW,
                         });
                     }
-                    let level = self.db.find_level(&name).await + 1;
+                    let level = self.db.find_level(&name).await
+                        + self.assets.constants.channel_point_levels;
                     self.db.set_level(&name, level);
                     let hp = self.assets.constants.initial_health
                         + (level.max(1) - 1) * self.assets.constants.extra_health_per_level;
