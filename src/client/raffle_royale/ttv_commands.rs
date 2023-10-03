@@ -248,7 +248,8 @@ impl State {
                 match message_text.trim() {
                     "!lvl" | "!level" => {
                         let level = self.db.find_level(&name).await;
-                        let hp = level * self.assets.constants.health_per_level;
+                        let hp = self.assets.constants.initial_health
+                            + (level.max(1) - 1) * self.assets.constants.extra_health_per_level;
                         self.connection.reply(
                             &format!("You are level {} ({} hp) ⭐", level, hp),
                             &message_id,
@@ -271,8 +272,10 @@ impl State {
             ServerMessage::RewardRedemption { name, reward } => {
                 if reward == "Raffle Royale Level Up" {
                     if let Some(guy) = self.guys.iter_mut().find(|guy| guy.name == name) {
-                        guy.health += self.assets.constants.health_per_level;
-                        guy.max_health += self.assets.constants.health_per_level;
+                        let extra_hp = self.assets.constants.extra_health_per_level
+                            * self.assets.constants.channel_point_levels;
+                        guy.health += extra_hp;
+                        guy.max_health += extra_hp;
                         let mut effect = self.assets.levelup_sfx.effect();
                         effect.set_volume(self.volume);
                         effect.play();
@@ -292,7 +295,8 @@ impl State {
                     }
                     let level = self.db.find_level(&name).await + 1;
                     self.db.set_level(&name, level);
-                    let hp = level * self.assets.constants.health_per_level;
+                    let hp = self.assets.constants.initial_health
+                        + (level.max(1) - 1) * self.assets.constants.extra_health_per_level;
                     self.connection
                         .say(&format!("{} is now level {} ({} hp) ⭐", name, level, hp));
                 }

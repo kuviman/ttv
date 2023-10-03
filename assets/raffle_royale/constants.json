@@ -1,7 +1,9 @@
 {
+    "channel_point_levels": 5,
     "background": "#050",
     "circle": "#0a0",
-    "health_per_level": 5,
+    "initial_health": 5,
+    "extra_health_per_level": 1,
     "health_per_click": 10,
     "bless_hp": 10,
     "volume": 0.5,

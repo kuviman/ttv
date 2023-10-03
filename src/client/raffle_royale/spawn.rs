@@ -3,7 +3,8 @@ use super::*;
 impl State {
     pub async fn spawn_guy(&mut self, name: String, random: bool) {
         let level = self.db.find_level(&name).await;
-        let health = level * self.assets.constants.health_per_level;
+        let health = self.assets.constants.initial_health
+            + (level.max(1) - 1) * self.assets.constants.extra_health_per_level;
         let id = self.next_id;
         self.next_id += 1;
         self.guys.insert(Guy {

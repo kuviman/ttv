@@ -3,9 +3,11 @@ use super::*;
 #[derive(Deserialize, geng::asset::Load)]
 #[load(serde = "json")]
 pub struct Constants {
+    pub channel_point_levels: usize,
     pub background: Rgba<f32>,
     pub circle: Rgba<f32>,
-    pub health_per_level: usize,
+    pub initial_health: usize,
+    pub extra_health_per_level: usize,
     pub health_per_click: usize,
     pub volume: f64,
     pub guy_palette: Vec<Rgba<f32>>,
