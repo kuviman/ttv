@@ -22,6 +22,8 @@
           name = "ttv-web";
           src = ./.;
           platform = "web";
+          cargoExtraArgs = "--target wasm32-unknown-unknown";
+          buildInputs = [ pkgs.lld ];
         };
       };
       devShells.${system}.default = geng.mkShell {
