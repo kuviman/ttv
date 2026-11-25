@@ -20,7 +20,7 @@ impl State {
                     self.camera.center
                         + vec2(
                             thread_rng().gen_range(
-                                0.0..self.camera.fov / 2.0
+                                0.0..self.camera.fov.value() / 2.0
                                     * (self.framebuffer_size.x as f32
                                         / self.framebuffer_size.y as f32)
                                         .max(1.0),
@@ -46,7 +46,7 @@ impl State {
                 self.camera.center
                     + vec2(
                         thread_rng().gen_range(
-                            0.0..self.camera.fov / 2.0
+                            0.0..self.camera.fov.value() / 2.0
                                 * (self.framebuffer_size.x as f32 / self.framebuffer_size.y as f32)
                                     .max(1.0),
                         ),
@@ -67,7 +67,7 @@ impl State {
             .spawn_sfx
             .choose(&mut thread_rng())
             .unwrap()
-            .effect();
+            .effect(self.geng.audio().default_type());
         sound_effect.set_volume(self.volume);
         sound_effect.play();
     }

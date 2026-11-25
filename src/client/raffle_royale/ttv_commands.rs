@@ -221,7 +221,10 @@ impl State {
                             guy.health += self.assets.constants.bless_hp;
                             guy.max_health += self.assets.constants.bless_hp;
 
-                            let mut effect = self.assets.levelup_sfx.effect();
+                            let mut effect = self
+                                .assets
+                                .levelup_sfx
+                                .effect(self.geng.audio().default_type());
                             effect.set_volume(self.volume);
                             effect.play();
 
@@ -276,7 +279,10 @@ impl State {
                             * self.assets.constants.channel_point_levels;
                         guy.health += extra_hp;
                         guy.max_health += extra_hp;
-                        let mut effect = self.assets.levelup_sfx.effect();
+                        let mut effect = self
+                            .assets
+                            .levelup_sfx
+                            .effect(self.geng.audio().default_type());
                         effect.set_volume(self.volume);
                         effect.play();
 

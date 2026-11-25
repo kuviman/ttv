@@ -30,7 +30,7 @@ impl Feature for State {
             camera: geng::Camera2d {
                 center: vec2::ZERO,
                 rotation: Angle::ZERO,
-                fov: 10.0,
+                fov: geng::Camera2dFov::Vertical(10.0),
             },
             time: 0.0,
             pos: vec2::ZERO,
@@ -63,7 +63,9 @@ impl Feature for State {
     }
 
     async fn handle(&mut self, message: &ServerMessage) {
-        let ServerMessage::ChatMessage { message, .. } = message else { return };
+        let ServerMessage::ChatMessage { message, .. } = message else {
+            return;
+        };
         if message.trim() != "!boom" {
             return;
         }
@@ -72,7 +74,7 @@ impl Feature for State {
         self.pos = vec2(
             thread_rng().gen_range(-1.0..1.0) * self.framebuffer_size.x / self.framebuffer_size.y,
             thread_rng().gen_range(-1.0..1.0),
-        ) * self.camera.fov
+        ) * self.camera.fov.value()
             / 2.0
             * 0.75;
     }

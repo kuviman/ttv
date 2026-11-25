@@ -30,7 +30,7 @@ impl Feature for State {
             camera: geng::Camera2d {
                 center: vec2::ZERO,
                 rotation: Angle::ZERO,
-                fov: 10.0,
+                fov: geng::Camera2dFov::Vertical(10.0),
             },
             geng,
             time: 10.0,
@@ -46,9 +46,10 @@ impl Feature for State {
         if self.time > 2.0 {
             return;
         }
-        let x =
-            self.camera.fov / 2.0 * framebuffer.size().x as f32 / framebuffer.size().y as f32 - 2.0;
-        let y = -self.camera.fov / 2.0 + 1.0;
+        let x = self.camera.fov.value() / 2.0 * framebuffer.size().x as f32
+            / framebuffer.size().y as f32
+            - 2.0;
+        let y = -self.camera.fov.value() / 2.0 + 1.0;
         self.geng.draw2d().draw2d(
             framebuffer,
             &self.camera,
@@ -74,7 +75,9 @@ impl Feature for State {
     }
 
     async fn handle(&mut self, message: &ServerMessage) {
-        let ServerMessage::RewardRedemption { name, reward } = message else { return };
+        let ServerMessage::RewardRedemption { name, reward } = message else {
+            return;
+        };
         if reward != "Hello" {
             return;
         }

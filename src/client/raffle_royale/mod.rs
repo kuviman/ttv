@@ -90,7 +90,7 @@ pub struct State {
     raffle_mode: RaffleMode,
     effects: Vec<Effect>,
     raffle_keyword: String,
-    volume: f64,
+    volume: f32,
     noise: noise::OpenSimplex,
 }
 
@@ -132,10 +132,10 @@ impl State {
         // if !opt.no_chat_spam {
         connection.say("Hai, im online 🤖");
         // }
-        let mut lobby_music = assets.lobby_music.effect();
+        let mut lobby_music = assets.lobby_music.effect(geng.audio().default_type());
         lobby_music.set_volume(0.0);
         lobby_music.play();
-        let mut battle_music = assets.battle_music.effect();
+        let mut battle_music = assets.battle_music.effect(geng.audio().default_type());
         battle_music.set_volume(0.0);
         battle_music.play();
 
@@ -154,7 +154,7 @@ impl State {
             camera: geng::Camera2d {
                 center: vec2::ZERO,
                 rotation: Angle::ZERO,
-                fov: 50.0,
+                fov: geng::Camera2dFov::Vertical(50.0),
             },
             framebuffer_size: vec2(1, 1),
             process_battle: false,
@@ -244,8 +244,11 @@ impl State {
         self.attacks.clear();
         self.next_attack = None;
         self.queued_attack = None;
-        let mut sfx = self.assets.title_sfx.effect();
-        sfx.set_volume((self.volume * 3.0).clamp(0.0, 1.0)); // TODO ?????
+        let mut sfx = self
+            .assets
+            .title_sfx
+            .effect(self.geng.audio().default_type());
+        sfx.set_volume((self.volume * 3.0).clamp(0.0, 1.0) as _); // TODO ?????
         sfx.play();
         self.raffle_mode = mode;
     }
@@ -265,10 +268,10 @@ impl State {
     }
     async fn update_impl(&mut self, delta_time: f32) {
         if self.geng.window().is_key_pressed(geng::Key::PageUp) {
-            self.volume = (self.volume + delta_time as f64).min(1.0);
+            self.volume = (self.volume + delta_time).min(1.0);
         }
         if self.geng.window().is_key_pressed(geng::Key::PageDown) {
-            self.volume = (self.volume - delta_time as f64).max(0.0);
+            self.volume = (self.volume - delta_time).max(0.0);
         }
 
         for effect in &mut self.effects {
@@ -294,8 +297,14 @@ impl State {
         if start_music {
             self.lobby_music.stop();
             self.battle_music.stop();
-            self.lobby_music = self.assets.lobby_music.effect();
-            self.battle_music = self.assets.battle_music.effect();
+            self.lobby_music = self
+                .assets
+                .lobby_music
+                .effect(self.geng.audio().default_type());
+            self.battle_music = self
+                .assets
+                .battle_music
+                .effect(self.geng.audio().default_type());
         }
         if self.process_battle {
             self.battle_fade += delta_time;
@@ -347,8 +356,9 @@ impl State {
                         }
                     }
                     self.winning_screen = true;
-                    let mut sound_effect = self.assets.win_sfx.effect();
-                    sound_effect.set_volume(self.volume);
+                    let mut sound_effect =
+                        self.assets.win_sfx.effect(self.geng.audio().default_type());
+                    sound_effect.set_volume(self.volume as _);
                     sound_effect.play();
                 }
             }
@@ -358,9 +368,9 @@ impl State {
         }
         self.battle_fade = self.battle_fade.clamp(0.0, 1.0);
         self.battle_music
-            .set_volume(self.battle_fade as f64 * volume * (1.0 - self.victory_fade as f64));
+            .set_volume(self.battle_fade * volume as f32 * (1.0 - self.victory_fade));
         self.lobby_music
-            .set_volume((1.0 - self.battle_fade as f64) * volume);
+            .set_volume((1.0 - self.battle_fade) * volume as f32);
 
         if start_music {
             self.lobby_music.play();
@@ -394,7 +404,7 @@ impl State {
             target_fov *= 1.5;
         }
         self.camera.center += (target_center - self.camera.center) * delta_time;
-        self.camera.fov += (target_fov - self.camera.fov) * delta_time;
+        *self.camera.fov.value_mut() += (target_fov - self.camera.fov.value()) * delta_time;
 
         // while let Some(message) = self.ttv_client.next_message() {
         //     self.handle_ttv(message);
@@ -423,7 +433,10 @@ impl Feature for State {
                         {
                             guy.health += self.assets.constants.health_per_click;
                             guy.max_health += self.assets.constants.health_per_click;
-                            let mut effect = self.assets.levelup_sfx.effect();
+                            let mut effect = self
+                                .assets
+                                .levelup_sfx
+                                .effect(self.geng.audio().default_type());
                             effect.set_volume(self.volume);
                             effect.play();
                             self.effects.push(Effect {
@@ -456,7 +469,10 @@ impl Feature for State {
                                     color: Rgba::BLACK,
                                 });
 
-                                let mut sound_effect = self.assets.death_sfx.effect();
+                                let mut sound_effect = self
+                                    .assets
+                                    .death_sfx
+                                    .effect(self.geng.audio().default_type());
                                 sound_effect.set_volume(self.volume * 0.5);
                                 sound_effect.play();
                             }

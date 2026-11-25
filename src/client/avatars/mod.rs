@@ -180,7 +180,7 @@ impl Feature for State {
             camera: geng::Camera2d {
                 center: vec2::ZERO,
                 rotation: Angle::ZERO,
-                fov: 30.0,
+                fov: geng::Camera2dFov::Vertical(30.0),
             },
             time: 0.0,
             crabs: default(),
@@ -189,8 +189,9 @@ impl Feature for State {
     }
     async fn update(&mut self, delta_time: f32) {
         self.time += delta_time;
-        let screen_size =
-            vec2(self.framebuffer_size.x / self.framebuffer_size.y, 1.0) * self.camera.fov / 2.0;
+        let screen_size = vec2(self.framebuffer_size.x / self.framebuffer_size.y, 1.0)
+            * self.camera.fov.value()
+            / 2.0;
 
         if self.breakout && self.bricks.is_empty() {
             self.win_timer -= delta_time;
@@ -566,7 +567,7 @@ impl Feature for State {
                 "!drop" if self.bouncy_game => {
                     crab.pos = vec2(
                         thread_rng().gen_range(-10.0..10.0),
-                        self.camera.fov / 2.0 + 1.0,
+                        self.camera.fov.value() / 2.0 + 1.0,
                     );
                 }
                 _ => {

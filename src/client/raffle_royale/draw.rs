@@ -18,7 +18,8 @@ impl State {
             let vertex = |x, y| {
                 let x = x * 2 - 1;
                 let y = y * 2 - 1;
-                let p = self.camera.center + vec2(x as f32, y as f32) * self.camera.fov * 2.0;
+                let p =
+                    self.camera.center + vec2(x as f32, y as f32) * self.camera.fov.value() * 2.0;
                 draw2d::TexturedVertex {
                     a_pos: p,
                     a_color: Rgba::WHITE,
@@ -149,7 +150,7 @@ impl State {
             }
         }
         for guy in &self.guys {
-            if let Some(pos) = self.camera.world_to_screen(
+            if let Ok(pos) = self.camera.world_to_screen(
                 self.framebuffer_size.map(|x| x as f32),
                 guy.position + vec2(0.0, State::GUY_RADIUS),
             ) {
@@ -159,7 +160,9 @@ impl State {
                     geng::Camera2d {
                         center: vec2::ZERO,
                         rotation: Angle::ZERO,
-                        fov: 20.0_f32.max(self.camera.fov * 0.6),
+                        fov: geng::Camera2dFov::Vertical(
+                            20.0_f32.max(self.camera.fov.value() * 0.6),
+                        ),
                     }
                 };
                 let pos =
@@ -242,7 +245,7 @@ impl State {
         let ui_camera = geng::Camera2d {
             center: vec2::ZERO,
             rotation: Angle::ZERO,
-            fov: 15.0,
+            fov: geng::Camera2dFov::Vertical(15.0),
         };
         if !self.process_battle {
             self.winning_screen = false;

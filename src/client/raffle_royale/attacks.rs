@@ -35,7 +35,10 @@ impl State {
                             color: Rgba::BLACK,
                         });
 
-                        let mut sound_effect = self.assets.death_sfx.effect();
+                        let mut sound_effect = self
+                            .assets
+                            .death_sfx
+                            .effect(self.geng.audio().default_type());
                         sound_effect.set_volume(self.volume * 0.5);
                         sound_effect.play();
                     }
@@ -81,7 +84,9 @@ impl State {
                     break 'schedule_attacks;
                 }
 
-                let Some(target) = guys.choose(&mut thread_rng()) else { break 'schedule_attacks };
+                let Some(target) = guys.choose(&mut thread_rng()) else {
+                    break 'schedule_attacks;
+                };
                 // let target = if let Ok(target) =
                 //     guys.choose_weighted(&mut thread_rng(), |guy| healths[&guy.id])
                 // {

@@ -9,7 +9,7 @@ pub struct Constants {
     pub initial_health: usize,
     pub extra_health_per_level: usize,
     pub health_per_click: usize,
-    pub volume: f64,
+    pub volume: f32,
     pub guy_palette: Vec<Rgba<f32>>,
     pub background_palette: Vec<Rgba<f32>>,
     pub beard_color: Rgba<f32>,
@@ -158,8 +158,8 @@ pub struct Assets {
 
 impl Assets {
     pub fn process(&mut self) {
-        self.lobby_music.set_looped(true);
-        self.battle_music.set_looped(true);
+        self.lobby_music.looped = true;
+        self.battle_music.looped = true;
         self.background.set_filter(ugli::Filter::Nearest);
         self.background.set_wrap_mode(ugli::WrapMode::Repeat);
     }

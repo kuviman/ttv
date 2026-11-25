@@ -61,7 +61,7 @@ impl Feature for State {
                 &geng::Camera2d {
                     center: vec2::ZERO,
                     rotation: Angle::ZERO,
-                    fov: 10.0,
+                    fov: geng::Camera2dFov::Vertical(10.0),
                 },
                 &draw2d::TexturedQuad::new(
                     Aabb2::point(vec2::ZERO).extend_uniform(1.0),
