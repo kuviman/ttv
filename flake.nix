@@ -1,27 +1,33 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOs/nixpkgs";
-    geng.url = "github:geng-engine/geng";
+    geng.url = "github:geng-engine/cargo-geng";
+    geng.inputs.nixpkgs.follows = "nixpkgs";
   };
-  outputs = { self, nixpkgs, geng }: geng.makeFlakeOutputs
-    (system:
-      let pkgs = import nixpkgs { inherit system; };
-      in
-      {
-        src = ./.;
-        buildInputs = [ pkgs.openssl ];
-      }) // {
-    web =
-      let
-        system = "x86_64-linux";
-        lib = geng.lib.${system};
-        pkgs = import nixpkgs { inherit system; };
-        buildGengPackage = import ./cargo-geng.nix { crane = lib.crane; cargo-geng = lib.cargo-geng; };
-      in
-      buildGengPackage {
-        name = "ttv-web";
-        src = ./.;
-        target = "web";
+  outputs = inputs:
+    let
+      system = "x86_64-linux";
+      geng = inputs.geng.lib;
+      pkgs = import inputs.nixpkgs { inherit system; };
+    in
+    {
+      packages.${system} = {
+        default = geng.buildGengPackage {
+          inherit system;
+          src = ./.;
+          buildInputs = [ pkgs.openssl ];
+        };
+        web = geng.buildGengPackage {
+          inherit system;
+          name = "ttv-web";
+          src = ./.;
+          platform = "web";
+        };
       };
-  };
+      devShells.${system}.default = geng.mkShell {
+        inherit system;
+        target.linux.enable = true;
+        target.web.enable = true;
+      };
+    };
 }

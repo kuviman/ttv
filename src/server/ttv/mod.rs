@@ -207,6 +207,13 @@ fn pubsub(access_token: &str, channel_login: &str, sender: UnboundedSender<Messa
             };
             let message = message.unwrap().unwrap();
             log::debug!("{:?}", message);
+            match message.opcode() {
+                websocket_lite::Opcode::Text => {}
+                websocket_lite::Opcode::Binary => {}
+                websocket_lite::Opcode::Close => break,
+                websocket_lite::Opcode::Ping => continue,
+                websocket_lite::Opcode::Pong => continue,
+            }
             let message = serde_json::from_str::<serde_json::Value>(message.as_text().unwrap())
                 .unwrap()
                 .as_object()
