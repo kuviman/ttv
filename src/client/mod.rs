@@ -4,6 +4,7 @@ use super::*;
 mod font;
 
 mod avatars;
+mod badcop;
 mod boom;
 mod hello;
 mod jumpscare;
@@ -66,7 +67,11 @@ impl Connection {
             request_id: request_id.clone(),
             key: format!("{key}.json"),
         });
-        let ServerMessage::KeyValue { request_id: response_request_id, value } = receiver.await.unwrap() else {
+        let ServerMessage::KeyValue {
+            request_id: response_request_id,
+            value,
+        } = receiver.await.unwrap()
+        else {
             unreachable!()
         };
         assert!(request_id == response_request_id);
@@ -294,6 +299,7 @@ pub fn run(geng_args: &geng::CliArgs, addr: &str) {
                     boom,
                     hello,
                     jumpscare,
+                    badcop,
                     sound_commands,
                     text_commands,
                 ])

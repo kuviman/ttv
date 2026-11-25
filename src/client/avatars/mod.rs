@@ -153,7 +153,7 @@ impl Feature for State {
         Self: Sized,
     {
         Self {
-            disabled: false,
+            disabled: true,
             geng: geng.clone(),
             grid_size: 10,
             win_timer: 0.0,
